@@ -1,0 +1,85 @@
+:host { display: block; }
+
+.sq {
+  margin-block: 1.25rem;
+
+  &__label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+  }
+
+  &__track {
+    display: flex;
+    gap: 4px;
+    width: 100%;
+  }
+
+  // Each box gets an equal share of the row. At 11 steps on a 360px content
+  // area the box is ~29 px wide — intentionally compact per spec.
+  &__box {
+    flex: 1 1 0;
+    min-width: 0;
+    height: 40px;
+    padding: 0;
+    border: 1.5px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: clamp(0.6rem, 2.2vw, 0.8rem);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+    // Soft grey in-between state before commit. Real :hover only on
+    // devices that actually have a pointer, so touch never gets a sticky
+    // hover after tapping; :active covers the equivalent touch-press
+    // feedback on mobile. Excluded once selected — the black fill wins.
+    &:not(.sq__box--selected) {
+      @media (hover: hover) {
+        &:hover {
+          background: var(--color-hover-bg);
+          border-color: var(--color-hover-border);
+        }
+      }
+
+      &:active {
+        background: var(--color-hover-bg);
+        border-color: var(--color-hover-border);
+      }
+    }
+
+    &--selected {
+      background: var(--color-selected-bg);
+      color: var(--color-selected-text);
+      border-color: var(--color-selected-bg);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-text);
+      outline-offset: 2px;
+    }
+  }
+
+  &__end-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.4rem;
+  }
+
+  &__label-min,
+  &__label-max {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    max-width: 46%;
+    line-height: 1.2;
+  }
+
+  &__label-max {
+    text-align: right;
+  }
+}

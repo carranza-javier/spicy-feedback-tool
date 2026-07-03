@@ -1,0 +1,17 @@
+<div class="chq">
+  <p class="chq__label">{{ label() }}</p>
+  <div class="chq__track" (mouseleave)="hover(null)">
+    @for (step of steps(); track step) {
+      <button
+        class="chq__box"
+        [class.chq__box--filled]="isFilled(step)"
+        [class.chq__box--empty]="isEmpty(step)"
+        type="button"
+        [attr.aria-label]="step + ' von ' + max() + ' Chilis'"
+        [attr.aria-pressed]="value() === step"
+        (mouseenter)="hover(step)"
+        (click)="select(step)"
+      >{{ touched() ? '🌶️' : step }}</button>
+    }
+  </div>
+</div>

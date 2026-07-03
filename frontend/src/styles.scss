@@ -1,0 +1,126 @@
+// ── Google Fonts ───────────────────────────────────────────────────────────────
+// Comfortaa : brand, logo, section/page titles  (--font-brand)
+// Work Sans : questions, options, buttons, body  (--font-body)
+// Both are loaded via <link> in index.html (faster than @import here).
+
+// ── Custom properties ─────────────────────────────────────────────────────────
+:root {
+  --font-brand: 'Comfortaa', cursive;
+  --font-body:  'Work Sans', sans-serif;
+
+  // Monochrome palette — spec: no accent colour.
+  // Selected state = solid black fill; unselected = grey/white outline.
+  --color-bg:            #ffffff;
+  --color-text:          #111111;
+  --color-text-muted:    #666666;
+  --color-border:        #cccccc;
+  --color-selected-bg:   #111111;
+  --color-selected-text: #ffffff;
+
+  // Interaction polish — discreet in-between states for hover/press on the
+  // public survey's option boxes/cards. Still strictly greyscale.
+  --color-hover-bg:        #f2f2f2;
+  --color-hover-border:    #999999;
+  --color-btn-primary-hover: #2c2c2c;
+
+  // Width system — the ONLY two container widths in the app. Every screen
+  // picks exactly one; nothing defines its own ad-hoc max-width.
+  //   --width-wide (~1100px) → content that should spread out on desktop:
+  //     public survey, admin exhibitions list, admin dashboard.
+  //   --width-form (~700px)  → single-column forms & short centred messages:
+  //     login, exhibition-edit, closed, thank-you.
+  // Both are MAX-widths, applied via .page below — see that rule for how
+  // the same numbers stay fully responsive down to mobile.
+  --width-wide:   1100px;
+  --width-form:   700px;
+  --page-padding: 1.25rem;
+}
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+// ── Base ──────────────────────────────────────────────────────────────────────
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%; // prevent font inflation on iOS rotation
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.5;
+  min-height: 100dvh;
+}
+
+// ── Typography ────────────────────────────────────────────────────────────────
+h1, h2, h3 {
+  font-family: var(--font-brand);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+p, label, input, textarea, button {
+  font-family: var(--font-body);
+}
+
+// ── Page shell ────────────────────────────────────────────────────────────────
+// One shared, responsive container for the whole app. Apply `.page` to the
+// root element of every screen; add `.page--wide` on top for screens that
+// should use the wider cap (see the width system comment above).
+//
+// `max-width` + `width: 100%` + `margin: 0 auto` is what makes these MAX,
+// not fixed, widths:
+//   - Large desktop (> the cap): content stops growing at --width-form /
+//     --width-wide, centred, with grey space either side.
+//   - Tablet / medium screens (between mobile and the cap): `width: 100%`
+//     means content just shrinks to fill whatever space is available, with
+//     --page-padding as breathing room — it never forces the cap and never
+//     overflows.
+//   - Mobile (~400px): same rule, same padding — this is exactly the layout
+//     the public survey already used, now just one case of the same system
+//     instead of a separate mobile-only ruleset.
+.page {
+  width: 100%;
+  max-width: var(--width-form);
+  margin: 0 auto;
+  padding: var(--page-padding);
+
+  @media (min-width: 640px) {
+    padding: 2rem 2.5rem;
+  }
+
+  &--wide {
+    max-width: var(--width-wide);
+  }
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+// ── Focus ─────────────────────────────────────────────────────────────────────
+:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 2px;
+}
+
+// ── Motion ────────────────────────────────────────────────────────────────────
+// Applies globally so every hover/press transition added across the survey's
+// components collapses to an instant state change for users who asked for it,
+// without needing a duplicate media query in each component's stylesheet.
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

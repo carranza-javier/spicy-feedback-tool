@@ -1,0 +1,41 @@
+<div class="page login-page">
+  <h1 class="login-page__title">spicy</h1>
+  <p class="login-page__sub">Admin</p>
+
+  <form class="login-form" (ngSubmit)="submit()" novalidate>
+    <div class="field">
+      <label class="field__label" for="username">Benutzername</label>
+      <input
+        class="field__input"
+        id="username"
+        type="text"
+        name="username"
+        [(ngModel)]="username"
+        autocomplete="username"
+        autocapitalize="off"
+        required
+      >
+    </div>
+
+    <div class="field">
+      <label class="field__label" for="password">Passwort</label>
+      <input
+        class="field__input"
+        id="password"
+        type="password"
+        name="password"
+        [(ngModel)]="password"
+        autocomplete="current-password"
+        required
+      >
+    </div>
+
+    @if (error) {
+      <p class="login-form__error" role="alert">{{ error }}</p>
+    }
+
+    <button class="btn-primary" type="submit" [disabled]="loading">
+      {{ loading ? 'Anmelden…' : 'Anmelden' }}
+    </button>
+  </form>
+</div>

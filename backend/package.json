@@ -1,0 +1,17 @@
+{
+  "name": "spicy-feedback-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.24.0"
+  }
+}

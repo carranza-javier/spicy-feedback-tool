@@ -1,0 +1,60 @@
+:host { display: block; }
+
+.cq {
+  margin-block: 1.25rem;
+
+  &__label {
+    font-size: 0.95rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+  }
+
+  &__options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  &__card {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+    // Soft grey in-between state before commit — same treatment as the
+    // scale boxes. :hover is gated to real pointer devices so a tap on
+    // mobile never leaves a sticky hover; :active gives the touch-press
+    // feedback there instead. Excluded once selected.
+    &:not(.cq__card--selected) {
+      @media (hover: hover) {
+        &:hover {
+          background: var(--color-hover-bg);
+          border-color: var(--color-hover-border);
+        }
+      }
+
+      &:active {
+        background: var(--color-hover-bg);
+        border-color: var(--color-hover-border);
+      }
+    }
+
+    &--selected {
+      background: var(--color-selected-bg);
+      color: var(--color-selected-text);
+      border-color: var(--color-selected-bg);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-text);
+      outline-offset: 2px;
+    }
+  }
+}

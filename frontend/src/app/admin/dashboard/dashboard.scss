@@ -1,0 +1,196 @@
+:host { display: block; }
+
+.db {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+
+  // Standalone back-navigation, separate from the header actions below —
+  // so the arrow reads as "go back to the list", not as pointing at CSV.
+  &__back-nav {
+    margin-bottom: 1rem;
+  }
+
+  &__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 1.35rem;
+    margin-bottom: 0.15rem;
+  }
+
+  &__subtitle {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+
+  &__state {
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    &--error { color: var(--color-text); }
+  }
+
+  // ── Total counter ──────────────────────────────────────────────────────────
+  &__total {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    padding-bottom: 1.25rem;
+    border-bottom: 2px solid var(--color-text);
+  }
+
+  &__total-num {
+    font-family: var(--font-brand);
+    font-size: 2.5rem;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  &__total-label {
+    font-size: 1rem;
+    color: var(--color-text-muted);
+  }
+
+  &__empty {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+  }
+
+  // ── Sections (one per survey page) ────────────────────────────────────────
+  &__section {
+    margin-bottom: 2.5rem;
+  }
+
+  &__section-title {
+    font-family: var(--font-brand);
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  // ── Individual question block ──────────────────────────────────────────────
+  &__q {
+    margin-bottom: 2rem;
+  }
+
+  &__q-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  // ── Scale meta (average + answered count) ─────────────────────────────────
+  &__scale-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+  }
+
+  &__avg {
+    font-family: var(--font-brand);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1;
+    // Matches the highlighted (average) bar in the chart below — a direct,
+    // deliberate colour link, not a stray accent.
+    color: #eb6834;
+  }
+
+  &__answered {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+
+  // ── Text answer list ───────────────────────────────────────────────────────
+  &__no-text {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    font-style: italic;
+  }
+
+  &__text-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 16rem;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+  }
+
+  &__text-item {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    padding: 0.5rem 0.75rem;
+    border-left: 2px solid var(--color-border);
+    background: #fafafa;
+  }
+}
+
+// ── Chart containers ───────────────────────────────────────────────────────────
+.chart-wrap {
+  position: relative;
+  width: 100%;
+
+  // Default: sized by explicit [style.height.px] from host (for checkbox).
+  // For scale bars a fixed compact height is fine, taller on wide admin layout
+  // since the chart also gets much wider there.
+  &--bar {
+    height: 180px;
+
+    @media (min-width: 640px) {
+      height: 240px;
+    }
+  }
+}
+
+// ── Buttons ────────────────────────────────────────────────────────────────────
+.btn-back {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+  &:hover { color: var(--color-text); }
+}
+
+.btn-csv {
+  flex-shrink: 0;
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.375rem 0.875rem;
+  background: var(--color-text);
+  color: var(--color-bg);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+}

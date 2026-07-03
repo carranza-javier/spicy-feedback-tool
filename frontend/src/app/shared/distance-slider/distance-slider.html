@@ -1,0 +1,23 @@
+<div class="ds">
+  <p class="ds__label">{{ label() }}</p>
+
+  <p class="ds__current" [class.ds__current--touched]="touched()">
+    {{ currentLabel() }}
+  </p>
+
+  <div class="ds__track-wrap">
+    <div class="ds__rail"></div>
+    <div class="ds__fill" [style.width.%]="fillPercent()"></div>
+    <input
+      class="ds__input"
+      type="range"
+      min="0"
+      [max]="maxIndex()"
+      step="any"
+      [value]="currentRaw()"
+      (input)="onInput($event)"
+      [attr.aria-label]="label()"
+      [attr.aria-valuetext]="currentLabel()"
+    />
+  </div>
+</div>

@@ -1,0 +1,151 @@
+:host { display: block; }
+
+.al {
+  padding-top: 1.5rem;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+  }
+
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 1.5rem;
+  }
+
+  &__state {
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--color-text-muted);
+
+    &--error { color: var(--color-text); }
+  }
+
+  &__empty {
+    margin-top: 3rem;
+    text-align: center;
+    color: var(--color-text-muted);
+    line-height: 1.8;
+  }
+
+  &__table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+
+    th, td {
+      padding: 0.625rem 0.5rem;
+      text-align: left;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    th {
+      font-weight: 600;
+      white-space: nowrap;
+      color: var(--color-text-muted);
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+  }
+
+  &__th--num,
+  &__td--num {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  &__th--actions,
+  &__td--actions {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  &__td--name {
+    font-weight: 500;
+    min-width: 6rem;
+  }
+
+  &__td--dates {
+    white-space: nowrap;
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  // Active row: left border accent, slight background.
+  &__row--active {
+    td { background: #f8f8f8; }
+    td:first-child { border-left: 3px solid var(--color-text); }
+  }
+}
+
+// ── Status badges ──────────────────────────────────────────────────────────────
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--active {
+    background: var(--color-selected-bg);
+    color: var(--color-selected-text);
+  }
+
+  &--upcoming {
+    border: 1.5px solid var(--color-text);
+    color: var(--color-text);
+  }
+
+  &--finished {
+    border: 1.5px solid var(--color-border);
+    color: var(--color-text-muted);
+  }
+}
+
+// ── Buttons ────────────────────────────────────────────────────────────────────
+.btn-new {
+  padding: 0.5rem 0.875rem;
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+}
+
+.btn-row {
+  padding: 0.3rem 0.625rem;
+  border: 1.5px solid var(--color-border);
+  border-radius: 3px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-left: 0.25rem;
+
+  &:hover { border-color: var(--color-text); }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-text);
+    outline-offset: 2px;
+  }
+}

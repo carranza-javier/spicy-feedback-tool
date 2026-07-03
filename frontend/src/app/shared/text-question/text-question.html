@@ -1,0 +1,11 @@
+<div class="tq">
+  <label class="tq__label" [for]="uid">{{ label() }}</label>
+  <textarea
+    class="tq__area"
+    [id]="uid"
+    [value]="value()"
+    (input)="onInput($event)"
+    rows="4"
+    autocomplete="off"
+  ></textarea>
+</div>

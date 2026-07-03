@@ -1,0 +1,104 @@
+<div class="page page--wide db">
+
+  <nav class="db__back-nav">
+    <button class="btn-back" type="button" (click)="router.navigate(['/admin/exhibitions'])">
+      ← Zurück
+    </button>
+  </nav>
+
+  <header class="db__header">
+    <div>
+      <h1 class="db__title">{{ exhibition()?.name ?? 'Ergebnisse' }}</h1>
+      @if (exhibition(); as ex) {
+        <p class="db__subtitle">{{ ex.startDate }} – {{ ex.endDate }}</p>
+      }
+    </div>
+    <button class="btn-csv" type="button" [disabled]="downloading() || totalCount() === 0" (click)="downloadCsv()">
+      {{ downloading() ? '…' : 'CSV' }}
+    </button>
+  </header>
+
+  @if (loading()) {
+    <p class="db__state">Laden…</p>
+  } @else if (error()) {
+    <p class="db__state db__state--error">{{ error() }}</p>
+  } @else {
+
+    <!-- Total counter -->
+    <div class="db__total">
+      <span class="db__total-num">{{ totalCount() }}</span>
+      <span class="db__total-label">{{ totalCount() === 1 ? 'Antwort' : 'Antworten' }} gesamt</span>
+    </div>
+
+    @if (totalCount() === 0) {
+      <p class="db__empty">
+        Noch keine Antworten für diese Ausstellung. Der Link ist aktiv, sobald das
+        Startdatum erreicht ist.
+      </p>
+    } @else {
+
+      @for (page of pageResults(); track page.title) {
+        <section class="db__section">
+          <h2 class="db__section-title">{{ page.title }}</h2>
+
+          @for (entry of page.questions; track entry.question.key) {
+            <div class="db__q">
+              <h3 class="db__q-label">{{ entry.question.label }}</h3>
+
+              @switch (entry.entryType) {
+
+                @case ('scale') {
+                  <div class="db__scale-meta">
+                    <span class="db__avg">Ø {{ entry.average }}</span>
+                    <span class="db__answered">{{ entry.answeredCount }} Antwort(en)</span>
+                  </div>
+                  <div class="chart-wrap chart-wrap--bar">
+                    <app-bar-chart
+                      [data]="chartData(entry)"
+                      [options]="chartOpts(entry)"
+                    />
+                  </div>
+                }
+
+                @case ('slider') {
+                  <p class="db__answered">{{ entry.answeredCount }} Antwort(en)</p>
+                  <div class="chart-wrap chart-wrap--bar">
+                    <app-bar-chart
+                      [data]="chartData(entry)"
+                      [options]="chartOpts(entry)"
+                    />
+                  </div>
+                }
+
+                @case ('checkbox') {
+                  <p class="db__answered">{{ entry.answeredCount }} Antwort(en)</p>
+                  <div class="chart-wrap" [style.height.px]="checkboxHeight(entry.question)">
+                    <app-bar-chart
+                      [data]="chartData(entry)"
+                      [options]="chartOpts(entry)"
+                    />
+                  </div>
+                }
+
+                @case ('text') {
+                  @if (entry.texts.length === 0) {
+                    <p class="db__no-text">Keine Textantworten eingegangen.</p>
+                  } @else {
+                    <p class="db__answered">{{ entry.texts.length }} Antwort(en)</p>
+                    <ul class="db__text-list">
+                      @for (t of entry.texts; track $index) {
+                        <li class="db__text-item">{{ t }}</li>
+                      }
+                    </ul>
+                  }
+                }
+
+              }
+            </div>
+          }
+        </section>
+      }
+
+    }
+  }
+</div>

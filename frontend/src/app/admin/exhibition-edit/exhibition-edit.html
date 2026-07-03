@@ -1,0 +1,147 @@
+<div class="page ae">
+  <header class="ae__header">
+    <h1 class="ae__title">
+      {{ mode() === 'create' ? 'Neue Ausstellung' : 'Ausstellung bearbeiten' }}
+    </h1>
+    <button class="btn-back" type="button" (click)="router.navigate(['/admin/exhibitions'])">
+      ← Zurück
+    </button>
+  </header>
+
+  @if (loading()) {
+    <p class="ae__state">Laden…</p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+
+      <!-- ── Exhibition fields ──────────────────────────────────────────── -->
+      <section class="ae__section">
+        <div class="field">
+          <label class="field__label" for="name">Name der Ausstellung</label>
+          <input
+            class="field__input"
+            [class.field__input--invalid]="form.controls.name.invalid && form.controls.name.touched"
+            id="name"
+            type="text"
+            formControlName="name"
+          >
+          @if (form.controls.name.invalid && form.controls.name.touched) {
+            <p class="field__error">Name ist erforderlich.</p>
+          }
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label class="field__label" for="startDate">Von</label>
+            <input
+              class="field__input"
+              [class.field__input--invalid]="form.controls.startDate.invalid && form.controls.startDate.touched"
+              id="startDate"
+              type="date"
+              formControlName="startDate"
+            >
+          </div>
+          <div class="field">
+            <label class="field__label" for="endDate">Bis</label>
+            <input
+              class="field__input"
+              [class.field__input--invalid]="form.controls.endDate.invalid && form.controls.endDate.touched"
+              id="endDate"
+              type="date"
+              formControlName="endDate"
+            >
+          </div>
+        </div>
+      </section>
+
+      <!-- ── Variable questions ─────────────────────────────────────────── -->
+      <section class="ae__section">
+        <div class="ae__vq-header">
+          <h2 class="ae__sub">Variable Fragen</h2>
+          <p class="ae__sub-hint">Die fixen Fragen (Abschnitte 1–4) werden immer angezeigt und sind hier nicht editierbar.</p>
+        </div>
+
+        <div formArrayName="variableQuestions" class="ae__vq-list">
+          @for (ctrl of vqArray.controls; track $index; let i = $index) {
+            <div class="vq-card" [formGroup]="questionGroup(i)">
+              <div class="vq-card__toolbar">
+                <span class="vq-card__num">Frage {{ i + 1 }}</span>
+                <button class="btn-remove" type="button" (click)="removeQuestion(i)">Entfernen</button>
+              </div>
+
+              <div class="field">
+                <label class="field__label">Fragetext</label>
+                <input
+                  class="field__input"
+                  type="text"
+                  formControlName="text"
+                  placeholder="Fragetext eingeben…"
+                >
+              </div>
+
+              <div class="field">
+                <label class="field__label">Typ</label>
+                <select class="field__select" formControlName="type">
+                  <option value="text">Freitext</option>
+                  <option value="scale">Skala</option>
+                  <option value="checkbox">Mehrfachauswahl</option>
+                </select>
+              </div>
+
+              @switch (getQuestionType(i)) {
+                @case ('scale') {
+                  <div class="vq-card__scale-config">
+                    <div class="field-row">
+                      <div class="field">
+                        <label class="field__label">Min</label>
+                        <input class="field__input" type="number" formControlName="min">
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Max</label>
+                        <input class="field__input" type="number" formControlName="max">
+                      </div>
+                    </div>
+                    <div class="field-row">
+                      <div class="field">
+                        <label class="field__label">Label links</label>
+                        <input class="field__input" type="text" formControlName="labelMin" placeholder="z. B. Gar nicht">
+                      </div>
+                      <div class="field">
+                        <label class="field__label">Label rechts</label>
+                        <input class="field__input" type="text" formControlName="labelMax" placeholder="z. B. Sehr">
+                      </div>
+                    </div>
+                  </div>
+                }
+                @case ('checkbox') {
+                  <div class="field">
+                    <label class="field__label">Optionen <span class="field__hint">(eine pro Zeile)</span></label>
+                    <textarea
+                      class="field__textarea"
+                      formControlName="optionsText"
+                      rows="4"
+                      placeholder="Option 1&#10;Option 2&#10;Option 3"
+                    ></textarea>
+                  </div>
+                }
+              }
+            </div>
+          }
+        </div>
+
+        <button class="btn-add-q" type="button" (click)="addQuestion()">+ Frage hinzufügen</button>
+      </section>
+
+      <!-- ── Actions ────────────────────────────────────────────────────── -->
+      @if (error()) {
+        <p class="ae__error">{{ error() }}</p>
+      }
+
+      <div class="ae__actions">
+        <button class="btn-primary" type="submit" [disabled]="saving()">
+          {{ saving() ? 'Speichern…' : 'Speichern' }}
+        </button>
+      </div>
+
+    </form>
+  }
+</div>

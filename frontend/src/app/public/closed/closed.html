@@ -1,0 +1,13 @@
+<div class="page cl">
+  <h1 class="cl__title">spicy Kunstraum</h1>
+  @if (lastExhibition(); as ex) {
+    <p class="cl__message">
+      Die Ausstellung <em>{{ ex.name }}</em> ist vorbei —<br>
+      das Feedback ist geschlossen.
+    </p>
+    <p class="cl__date">Bis zum {{ formatDate(ex.endDate) }}</p>
+  } @else {
+    <p class="cl__message">Derzeit ist keine Ausstellung aktiv.<br>Schau bald wieder vorbei!</p>
+  }
+  <p class="cl__chili">🌶</p>
+</div>

@@ -1,0 +1,29 @@
+# Node
+node_modules/
+
+# Build artifacts, not source
+backend/dist/
+frontend/dist/
+frontend/.angular/
+
+# Terraform build artifact produced by archive_file data source
+terraform/lambda.zip
+
+# Terraform local state and working files
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
+terraform/crash.log
+terraform/crash.*.log
+
+# Secrets — never committed; JWT secret lives in AWS SSM Parameter Store
+.env
+.env.*
+*.pem
+*.key
+
+# OS
+.DS_Store
+Thumbs.db

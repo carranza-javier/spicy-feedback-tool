@@ -1,0 +1,19 @@
+<div class="sq">
+  <p class="sq__label">{{ label() }}</p>
+  <div class="sq__track">
+    @for (step of steps(); track step) {
+      <button
+        class="sq__box"
+        [class.sq__box--selected]="value() === step"
+        type="button"
+        [attr.aria-label]="step + ' von ' + max()"
+        [attr.aria-pressed]="value() === step"
+        (click)="select(step)"
+      >{{ step }}</button>
+    }
+  </div>
+  <div class="sq__end-labels">
+    <span class="sq__label-min">{{ labelMin() }}</span>
+    <span class="sq__label-max">{{ labelMax() }}</span>
+  </div>
+</div>

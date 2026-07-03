@@ -1,0 +1,49 @@
+<div class="page page--wide al">
+  <header class="al__header">
+    <h1 class="al__title">Ausstellungen</h1>
+    <button class="btn-new" type="button" (click)="newExhibition()">+ Neu</button>
+  </header>
+
+  @if (loading()) {
+    <p class="al__state">Laden…</p>
+  } @else if (error()) {
+    <p class="al__state al__state--error">{{ error() }}</p>
+  } @else if (exhibitions().length === 0) {
+    <div class="al__empty">
+      <p>Noch keine Ausstellungen vorhanden.</p>
+      <p>Erstelle die erste Ausstellung mit dem Button oben.</p>
+    </div>
+  } @else {
+    <div class="al__table-wrap">
+      <table class="al__table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Zeitraum</th>
+            <th>Status</th>
+            <th class="al__th--num">Antworten</th>
+            <th class="al__th--actions">Aktionen</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (ex of exhibitions(); track ex.exhibitionId) {
+            <tr [class.al__row--active]="status(ex) === 'active'">
+              <td class="al__td--name">{{ ex.name }}</td>
+              <td class="al__td--dates">
+                {{ formatDate(ex.startDate) }} –<br>{{ formatDate(ex.endDate) }}
+              </td>
+              <td>
+                <span class="badge badge--{{ status(ex) }}">{{ statusLabel(ex) }}</span>
+              </td>
+              <td class="al__td--num">{{ ex.responseCount }}</td>
+              <td class="al__td--actions">
+                <button class="btn-row" type="button" (click)="edit(ex)">Bearbeiten</button>
+                <button class="btn-row" type="button" (click)="viewDashboard(ex)">Ergebnisse</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</div>

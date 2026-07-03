@@ -1,0 +1,92 @@
+@if (status() === 'active') {
+  <div class="progress-track" aria-hidden="true">
+    <div class="progress-fill" [style.width.%]="progressPercent()"></div>
+  </div>
+}
+
+<div class="page page--wide">
+  @if (status() === 'loading') {
+    <p class="state-msg">Laden…</p>
+  } @else if (status() === 'none') {
+    <div class="state-none">
+      <h1 class="state-title">spicy Kunstraum</h1>
+      <p>Derzeit läuft keine Ausstellung.<br>Schau bald wieder vorbei!</p>
+    </div>
+  } @else {
+    <header class="survey-header">
+      <h2 class="section-title">{{ pageTitle() }}</h2>
+      @if (currentPage() === 1 && exhibition()?.name) {
+        <p class="exhibition-name">{{ exhibition()!.name }}</p>
+      }
+    </header>
+
+    @for (q of pageQuestions(); track q.key) {
+      @switch (q.type) {
+        @case ('scale') {
+          @if (q.key === 'chiliRating') {
+            <app-chili-question
+              [label]="q.label"
+              [min]="q.min ?? 1"
+              [max]="q.max ?? 5"
+              [value]="getScaleAnswer(q.key)"
+              (valueChange)="setAnswer(q.key, $event)"
+            />
+          } @else {
+            <app-scale-question
+              [label]="q.label"
+              [min]="q.min ?? 0"
+              [max]="q.max ?? 10"
+              [labelMin]="q.labelMin ?? ''"
+              [labelMax]="q.labelMax ?? ''"
+              [value]="getScaleAnswer(q.key)"
+              (valueChange)="setAnswer(q.key, $event)"
+            />
+          }
+        }
+        @case ('slider') {
+          <app-distance-slider
+            [label]="q.label"
+            [options]="q.options ?? []"
+            [value]="getSliderAnswer(q.key)"
+            (valueChange)="setAnswer(q.key, $event)"
+          />
+        }
+        @case ('checkbox') {
+          <app-checkbox-question
+            [label]="q.label"
+            [options]="q.options ?? []"
+            [selected]="getCheckboxAnswer(q.key)"
+            (selectedChange)="setAnswer(q.key, $event)"
+          />
+        }
+        @case ('text') {
+          <app-text-question
+            [label]="q.label"
+            [value]="getTextAnswer(q.key)"
+            (valueChange)="setAnswer(q.key, $event)"
+          />
+        }
+      }
+    }
+
+    @if (submitError()) {
+      <p class="error-msg">Etwas ist schiefgelaufen. Bitte versuche es nochmal.</p>
+    }
+
+    <div class="nav-row">
+      @if (currentPage() > 1) {
+        <button class="btn-secondary" type="button" (click)="back()">Zurück</button>
+      }
+      @if (currentPage() < 4) {
+        <button class="btn-primary" type="button" (click)="next()">Weiter</button>
+      } @else {
+        <button
+          class="btn-primary"
+          type="button"
+          [disabled]="submitting()"
+          (click)="submit()"
+        >{{ submitting() ? 'Wird gesendet…' : 'Absenden' }}</button>
+      }
+    </div>
+  }
+</div>
