@@ -11,7 +11,21 @@
         [attr.aria-pressed]="value() === step"
         (mouseenter)="hover(step)"
         (click)="select(step)"
-      >{{ touched() ? '🌶️' : step }}</button>
+      >
+        {{ touched() ? '🌶️' : step }}
+        <!--
+          One per box, always rendered (not @if'd) so viewChildren('burstEl')
+          resolves as soon as the component mounts — no waiting a tick for
+          it to appear before the first burst can use it. Empty and
+          pointer-events: none whenever this step isn't in activeSteps().
+        -->
+        <span
+          #burstEl
+          class="chq__burst"
+          [class.chq__burst--active]="activeSteps().has(step)"
+          aria-hidden="true"
+        ></span>
+      </button>
     }
   </div>
 </div>

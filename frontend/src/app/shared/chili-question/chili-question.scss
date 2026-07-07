@@ -33,6 +33,9 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    // Anchors this box's OWN .chq__burst — each filled box gets its own
+    // player, centered on itself, not a shared overlay across several.
+    position: relative;
     transition: background 0.15s ease, border-color 0.15s ease,
       filter 0.15s ease, opacity 0.15s ease;
 
@@ -70,5 +73,35 @@
     font-size: 1.5rem;
     filter: grayscale(1);
     opacity: 0.4;
+  }
+
+  // Animated SVG fire burst — one copy PER filled box, anchored to and
+  // centered on THAT box specifically (position: relative on &__box,
+  // above). Fixed at close to the source asset's own aspect ratio
+  // (400x490 ≈ 0.816) and slightly larger than the 56px box itself so the
+  // flame visibly reads as bursting out of it, not fitting neatly inside
+  // it; deliberately allowed to overflow the button's own bounds (no
+  // overflow: hidden on &__box) since neither it nor any ancestor up to
+  // the page clips. The fetched SVG markup already sets width="100%"
+  // height="100%" on its own root <svg> element, so no CSS is needed (or
+  // reliably reachable — content set via a raw .innerHTML assignment isn't
+  // rendered by Angular's template, so Angular's emulated style
+  // encapsulation can't scope a selector down into it) to size the
+  // animation itself.
+  &__burst {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 44px;
+    height: 54px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.1s ease;
+
+    &--active {
+      opacity: 1;
+    }
   }
 }

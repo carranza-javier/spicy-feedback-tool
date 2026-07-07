@@ -662,6 +662,158 @@ production GitHub Pages deploy + real admin password handoff.
       lands — accepted as fine given the backend rejects any actual save
       regardless, and this project's admin panel is used only a few times a
       year (not worth blocking the whole form on that round-trip).
+- [x] **Chili fire-burst effect — attempted, then reverted.** Tried a
+      one-shot CSS particle "flame burst" on `chili-question` commit
+      (adapted from a reference fire/smoke demo — smoke, `filter: blur()`,
+      `mix-blend-mode: screen`, and the `infinite` loop were stripped out;
+      kept a one-shot `rise` keyframe anchored per filled chili). First pass
+      spawned particles spread across the whole track (sized for the
+      original room-scale demo container), which read as sparks scattered
+      around the screen rather than fire on the chilies. Second pass fixed
+      that — particles anchored tightly to each filled box's own center
+      (verified within ±5px via `getBoundingClientRect()`), elongated
+      flame-tongue shapes instead of round balls — and visually confirmed
+      via cropped screenshots at several animation timestamps to actually
+      look like fire on the peppers. Still reverted anyway: visually it
+      didn't hold up well enough to keep. `chili-question.ts`/`.html`/`.scss`
+      restored to exactly their pre-experiment (post-redesign) state via
+      `git checkout` — confirmed clean (`git status` shows no diff against
+      the last commit) and re-verified live (plain numbers pristine, full
+      emoji preview on hover, correct filled/empty split on select, zero
+      leftover particle DOM, filled boxes render with no filter — i.e.
+      identical behaviour to before the experiment). **Next**: replace with
+      a custom animation built on our own asset instead of a particle
+      system.
+- [x] **Chili fire-burst — switched to a Lottie asset, replacing the
+      abandoned CSS-particle experiment above.** Same trigger/guard as
+      before (fires only from a real `select()`, never on mount/back-
+      navigation, never on hover) and same one-shot semantics (`loop:
+      false`, plays once, cleans itself up) — only the rendering mechanism
+      changed, from generated CSS particles to `lottie-web` playing
+      `frontend/src/assets/fire-animation.json` (a 725KB, self-contained —
+      no external image assets — 400×490 SVG-shape Lottie file, ~1.33s at
+      24fps, confirmed transparent background).
+      **One shared player, not one per filled chili** (explicit performance
+      ask, since this runs on phones for ~95% of visitors): a single
+      `AnimationItem` is created per burst, sized close to the source
+      asset's own aspect ratio (74×90px, ≈400:490) and positioned by its
+      own center over the horizontal midpoint of the currently-filled span
+      — not stretched across it. **First attempt at sizing got this wrong**
+      and needed a visible fix, same lesson as the particle experiment
+      (verify visually, don't trust that it renders): stretched the player
+      to span the full filled width using `preserveAspectRatio: "xMidYMid
+      slice"` (cover + crop), on the assumption the flame art filled its
+      canvas edge-to-edge. It doesn't — it's one tapered flame shape with
+      transparent margins — so "slice" mostly showed empty space with a
+      sliver of flame lost in the middle of a wide box. Fixed by sizing the
+      container to the asset's native ratio and switching to the default
+      `"xMidYMid meet"` (contain, undistorted); confirmed via screenshots
+      at value 1 (single filled chili — flame fills that one box
+      dramatically) and value 6 (all filled — flame centered over the
+      group) that it now renders as one whole, undistorted flame burst in
+      both cases.
+      **Data is fetched once and cached** (a `static` field on the
+      component class, not per-burst `path:` loading) — confirmed via
+      network-request counting across three separate bursts in one session
+      (1 request total). A generation-token guard prevents a narrow race
+      where two rapid selections during that very first (pre-cache) fetch
+      could otherwise both resolve and each try to create an instance;
+      confirmed no stacking via a rapid re-select mid-animation (exactly 1
+      `<svg>` present, not 2). `ngOnDestroy` / the `'complete'` event / a
+      fresh `select()` all route through one `stopBurst()` that calls
+      `.destroy()` on the Lottie instance — confirmed zero console errors
+      destroying the component mid-animation (navigating away and back)
+      and zero leftover DOM after a burst completes naturally.
+      `prefers-reduced-motion` is checked in JS before ever fetching/
+      creating anything — reduced-motion users get the instant filled-red
+      state with no animation attempted at all, same pattern as the
+      earlier particle version.
+      **Two supporting changes outside `chili-question/` were required and
+      are the only exceptions to the "scoped only to chili-question"
+      constraint**, both pure enablement, no behaviour of their own:
+      `frontend/package.json`/`package-lock.json` gained the `lottie-web`
+      dependency (ships its own TypeScript types, no `@types` package
+      needed), and `frontend/angular.json`'s build `assets` array gained a
+      `{ glob: "**/*", input: "src/assets", output: "assets" }` entry —
+      without it, `fire-animation.json` 404s at runtime, since this
+      project's existing asset convention is the `public/` folder (that's
+      where `favicon.ico` lives), which Angular 17+'s default schematic
+      does not automatically extend to also cover `src/assets/`.
+      Verified end-to-end live (not just that it compiles): created a real
+      test exhibition, drove the survey through Playwright, and confirmed
+      via screenshots at several timestamps that the flame genuinely fades
+      in, peaks, and fades out — not a frozen frame — plus all the
+      guard/cleanup behaviour above. Noted in passing, not acted on: the
+      `survey` lazy chunk grew from ~22KB to ~76KB raw (~9KB → ~71KB
+      estimated transfer) for this one decorative effect, and the build
+      emits a benign "lottie-web is not ESM" warning (CommonJS dependency,
+      disables some tree-shaking — not a build error).
+- [x] **Lottie fire burst — corrected to fire on every filled chili, then
+      abandoned for a measured performance reason (not a guess).** The
+      single-shared-player version above only ever showed fire on one
+      chili regardless of how many were filled, and it was visibly
+      off-center — confirmed via screenshot, e.g. selecting value 5 lit
+      only chili #3. Fixed properly: one `AnimationItem` **per filled
+      chili**, each anchored inside its own `.chq__box` via `viewChildren()`
+      collecting one `#burstEl` per `@for` iteration (matched to `steps()`
+      by array index). Confirmed via DOM query — `[1,1,1,1,1,0]` SVGs per
+      box at value 5 — and via `getBoundingClientRect()` — every burst's
+      center within 0px of its own box's center.
+      **Then measured, and dropped anyway.** Worst case (all 6 filled) at
+      4x CPU throttling (mobile approximation): **~3.9s** from click to all
+      6 players mounted, **~4.75s** total main-thread blocking time (one
+      single block was 3.77s — the page is frozen for most of that
+      window). Even at full desktop speed: one ~490ms block just to create
+      6 instances. Tried the `canvas` renderer as a cheap alternative —
+      only ~25% better (~2.9s / ~3.7s blocked), not a fix; the cost is
+      inherent to building 6 independent render trees from a 12-layer
+      vector animation, not the SVG-vs-canvas choice. Reported these
+      numbers rather than pre-emptively working around them, since a
+      single-player tradeoff had already been rejected once for not
+      actually doing what was asked.
+- [x] **Fire burst — replaced Lottie entirely with a plain animated SVG**
+      (`frontend/src/assets/fire-animation.svg`, 669KB, same 400×490
+      viewBox and ~1.333s duration as the old Lottie source — reads as a
+      native SVG/SMIL re-export of the same asset). `lottie-web` is fully
+      removed: no import, no `AnimationItem`, no `viewChildren()`-driven
+      player lifecycle. `npm uninstall lottie-web` brought
+      `package.json`/`package-lock.json` back to an exact byte-for-byte
+      match with the pre-Lottie commit (confirmed via `git diff` showing
+      no change to either file) — confirmed nothing else in the project
+      imports it first.
+      **The positioning fix from the per-box Lottie version was reused
+      as-is**, per instruction — `position: relative` on `&__box`, burst
+      centered via `top/left/transform` — none of that CSS changed.
+      **Mechanism**: the SVG's own SMIL `<animate>` elements all use
+      `repeatCount="indefinite"` — it loops forever natively once parsed
+      into the DOM, so "one-shot" is enforced here, not by the asset. Each
+      burst sets every currently-filled box's container `innerHTML` to a
+      cached copy of the fetched markup (fresh DOM nodes get a fresh SMIL
+      timeline starting at insertion — merely toggling visibility on an
+      already-inserted copy would *not* restart it), then a single
+      `setTimeout` at 1333ms (matching the SVG's own `dur`) clears every
+      container back to `''`. Same generation-token guard and
+      `stopAllBursts()`-on-destroy/re-select pattern as the Lottie version,
+      adapted from instance `.destroy()` calls to `innerHTML = ''` — no
+      instances to leak now, just DOM nodes, which vanish the moment their
+      container's `innerHTML` is cleared.
+      Verified visually and via DOM: 0 SVGs before any click; exactly 5 at
+      value 5 (`[1,1,1,1,1,0]` per box, matching the fill pattern); 6 at
+      value 6 (every chili on fire simultaneously); 0 again ~1.55s after
+      click (past the 1333ms loop — proves the teardown actually runs, not
+      just that the fetch/insert works); exactly 1 network fetch across
+      multiple bursts (cached); no stacking on rapid re-select mid-
+      animation; 0 under `prefers-reduced-motion`; 0 on revisiting an
+      already-answered question; 0 console errors including a destroy-mid-
+      animation test. Screenshots at 350ms/650ms show bright flame at peak
+      fading to embers on every filled box at once, correctly centered.
+      `frontend/angular.json`'s `src/assets` build-assets entry (added for
+      the Lottie JSON) stays — still needed, now for the `.svg` file at the
+      same path. The old `fire-animation.json` (725KB) was initially left
+      in `src/assets/` untouched, then deleted in a follow-up once
+      confirmed (via a repo-wide grep) it had no references left anywhere
+      except this file's own historical notes above — `src/assets/` now
+      holds only `fire-animation.svg`.
 
 ---
 
