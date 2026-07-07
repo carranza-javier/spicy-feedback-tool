@@ -53,83 +53,125 @@
         </div>
       </section>
 
-      <!-- ── Variable questions ─────────────────────────────────────────── -->
-      <section class="ae__section">
-        <div class="ae__vq-header">
-          <h2 class="ae__sub">Variable Fragen</h2>
-          <p class="ae__sub-hint">Die fixen Fragen (Abschnitte 1–4) werden immer angezeigt und sind hier nicht editierbar.</p>
-        </div>
+      <!-- ── Questions, grouped by section ──────────────────────────────── -->
+      @if (questionsLocked()) {
+        <p class="ae__locked-notice">
+          Diese Ausstellung hat bereits Feedback erhalten – die Fragen können nicht mehr
+          geändert werden.
+        </p>
+      }
 
-        <div formArrayName="variableQuestions" class="ae__vq-list">
-          @for (ctrl of vqArray.controls; track $index; let i = $index) {
-            <div class="vq-card" [formGroup]="questionGroup(i)">
-              <div class="vq-card__toolbar">
-                <span class="vq-card__num">Frage {{ i + 1 }}</span>
-                <button class="btn-remove" type="button" (click)="removeQuestion(i)">Entfernen</button>
-              </div>
+      @for (section of sections; track section.key) {
+        <section class="ae__section">
+          <h2 class="ae__sub">{{ section.title }}</h2>
 
-              <div class="field">
-                <label class="field__label">Fragetext</label>
-                <input
-                  class="field__input"
-                  type="text"
-                  formControlName="text"
-                  placeholder="Fragetext eingeben…"
-                >
-              </div>
+          <div class="ae__vq-list">
+            @for (item of controlsForSection(section.key); track item.control) {
+              <div class="vq-card" [formGroup]="item.control">
+                <div class="vq-card__toolbar">
+                  <span class="vq-card__num">Frage</span>
+                  @if (!questionsLocked()) {
+                    <button class="btn-remove" type="button" (click)="removeQuestion(item.index)">Entfernen</button>
+                  }
+                </div>
 
-              <div class="field">
-                <label class="field__label">Typ</label>
-                <select class="field__select" formControlName="type">
-                  <option value="text">Freitext</option>
-                  <option value="scale">Skala</option>
-                  <option value="checkbox">Mehrfachauswahl</option>
-                </select>
-              </div>
+                <div class="field">
+                  <label class="field__label">Fragetext</label>
+                  <input
+                    class="field__input"
+                    type="text"
+                    formControlName="text"
+                    placeholder="Fragetext eingeben…"
+                  >
+                </div>
 
-              @switch (getQuestionType(i)) {
-                @case ('scale') {
-                  <div class="vq-card__scale-config">
-                    <div class="field-row">
-                      <div class="field">
-                        <label class="field__label">Min</label>
-                        <input class="field__input" type="number" formControlName="min">
-                      </div>
-                      <div class="field">
-                        <label class="field__label">Max</label>
-                        <input class="field__input" type="number" formControlName="max">
-                      </div>
-                    </div>
-                    <div class="field-row">
-                      <div class="field">
-                        <label class="field__label">Label links</label>
-                        <input class="field__input" type="text" formControlName="labelMin" placeholder="z. B. Gar nicht">
-                      </div>
-                      <div class="field">
-                        <label class="field__label">Label rechts</label>
-                        <input class="field__input" type="text" formControlName="labelMax" placeholder="z. B. Sehr">
-                      </div>
-                    </div>
-                  </div>
-                }
-                @case ('checkbox') {
+                <div class="field-row">
                   <div class="field">
-                    <label class="field__label">Optionen <span class="field__hint">(eine pro Zeile)</span></label>
-                    <textarea
-                      class="field__textarea"
-                      formControlName="optionsText"
-                      rows="4"
-                      placeholder="Option 1&#10;Option 2&#10;Option 3"
-                    ></textarea>
+                    <label class="field__label">Typ</label>
+                    <select class="field__select" formControlName="type">
+                      <option value="text">Freitext</option>
+                      <option value="scale">Skala</option>
+                      <option value="checkbox">Mehrfachauswahl</option>
+                      <option value="slider">Schieberegler</option>
+                    </select>
                   </div>
-                }
-              }
-            </div>
-          }
-        </div>
+                  <div class="field">
+                    <label class="field__label">Abschnitt</label>
+                    <select class="field__select" formControlName="section">
+                      @for (s of sections; track s.key) {
+                        <option [value]="s.key">{{ s.title }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
 
-        <button class="btn-add-q" type="button" (click)="addQuestion()">+ Frage hinzufügen</button>
-      </section>
+                @switch (getQuestionType(item.control)) {
+                  @case ('scale') {
+                    <div class="vq-card__scale-config">
+                      <div class="field-row">
+                        <div class="field">
+                          <label class="field__label">Min</label>
+                          <input class="field__input" type="number" formControlName="min">
+                        </div>
+                        <div class="field">
+                          <label class="field__label">Max</label>
+                          <input class="field__input" type="number" formControlName="max">
+                        </div>
+                      </div>
+                      <div class="field-row">
+                        <div class="field">
+                          <label class="field__label">Label links</label>
+                          <input class="field__input" type="text" formControlName="labelMin" placeholder="z. B. Gar nicht">
+                        </div>
+                        <div class="field">
+                          <label class="field__label">Label rechts</label>
+                          <input class="field__input" type="text" formControlName="labelMax" placeholder="z. B. Sehr">
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  @case ('checkbox') {
+                    <div class="vq-card__options" formArrayName="options">
+                      <label class="field__label">Optionen</label>
+                      @for (opt of optionsArray(item.control).controls; track opt; let oi = $index) {
+                        <div class="opt-row" [formGroup]="opt">
+                          <input class="field__input" type="text" formControlName="text" placeholder="Option…">
+                          @if (!questionsLocked()) {
+                            <button class="btn-remove" type="button" (click)="removeOption(item.control, oi)">✕</button>
+                          }
+                        </div>
+                      }
+                      @if (!questionsLocked()) {
+                        <button class="btn-add-q" type="button" (click)="addOption(item.control)">+ Option hinzufügen</button>
+                      }
+                    </div>
+                  }
+                  @case ('slider') {
+                    <div class="vq-card__options" formArrayName="options">
+                      <label class="field__label">Schritte <span class="field__hint">(in Reihenfolge)</span></label>
+                      @for (opt of optionsArray(item.control).controls; track opt; let oi = $index) {
+                        <div class="opt-row" [formGroup]="opt">
+                          <input class="field__input" type="text" formControlName="text" placeholder="Schritt…">
+                          @if (!questionsLocked()) {
+                            <button class="btn-remove" type="button" (click)="removeOption(item.control, oi)">✕</button>
+                          }
+                        </div>
+                      }
+                      @if (!questionsLocked()) {
+                        <button class="btn-add-q" type="button" (click)="addOption(item.control)">+ Schritt hinzufügen</button>
+                      }
+                    </div>
+                  }
+                }
+              </div>
+            }
+          </div>
+
+          @if (!questionsLocked()) {
+            <button class="btn-add-q" type="button" (click)="addQuestion(section.key)">+ Frage hinzufügen</button>
+          }
+        </section>
+      }
 
       <!-- ── Actions ────────────────────────────────────────────────────── -->
       @if (error()) {

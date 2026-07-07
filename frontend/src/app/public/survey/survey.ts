@@ -1,18 +1,12 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Api, Exhibition, SubmitResponsePayload } from '../../core/services/api';
 import { ScaleQuestion } from '../../shared/scale-question/scale-question';
 import { ChiliQuestion } from '../../shared/chili-question/chili-question';
 import { DistanceSlider } from '../../shared/distance-slider/distance-slider';
 import { CheckboxQuestion } from '../../shared/checkbox-question/checkbox-question';
 import { TextQuestion } from '../../shared/text-question/text-question';
-import {
-  FIXED_PAGES,
-  FIXED_QUESTION_KEYS,
-  PageDef,
-  QuestionDef,
-  mapVariableQuestion,
-} from '../../shared/question-defs';
+import { groupBySection, PageDef } from '../../shared/question-defs';
 
 @Component({
   selector: 'app-survey',
@@ -23,6 +17,7 @@ import {
 export class Survey implements OnInit {
   private readonly api    = inject(Api);
   private readonly router = inject(Router);
+  private readonly route  = inject(ActivatedRoute);
 
   readonly status      = signal<'loading' | 'active' | 'none'>('loading');
   readonly exhibition  = signal<Exhibition | null>(null);
@@ -31,26 +26,39 @@ export class Survey implements OnInit {
   readonly submitting  = signal(false);
   readonly submitError = signal(false);
 
-  // Variable questions appended to page 1 (exhibition-specific context).
-  readonly pages = computed<PageDef[]>(() => {
-    const [p1, ...rest] = FIXED_PAGES;
-    const vqs = this.exhibition()?.variableQuestions ?? [];
-    return [
-      { ...p1, questions: [...p1.questions, ...vqs.map(mapVariableQuestion)] },
-      ...rest,
-    ];
-  });
+  // Every question — template-derived or freeform — lives in the
+  // exhibition's own `questions` array; grouped into pages by section.
+  readonly pages = computed<PageDef[]>(() => groupBySection(this.exhibition()?.questions ?? []));
 
-  readonly progressPercent  = computed(() => (this.currentPage() / 4) * 100);
-  readonly currentPageDef   = computed(() => this.pages()[this.currentPage() - 1]);
-  readonly pageTitle        = computed(() => this.currentPageDef().title);
-  readonly pageQuestions    = computed(() => this.currentPageDef().questions);
+  readonly totalPages      = computed(() => this.pages().length);
+  readonly progressPercent = computed(() => (this.currentPage() / (this.totalPages() || 1)) * 100);
+  readonly currentPageDef  = computed(() => this.pages()[this.currentPage() - 1]);
+  readonly pageTitle       = computed(() => this.currentPageDef()?.title ?? '');
+  readonly pageQuestions   = computed(() => this.currentPageDef()?.questions ?? []);
 
   ngOnInit(): void {
+    // Arrived from the exhibition picker (overlapping-active case) — fetch
+    // that specific exhibition directly, still enforcing it's active.
+    const exhibitionId = this.route.snapshot.paramMap.get('exhibitionId');
+    if (exhibitionId) {
+      this.api.getExhibitionById(exhibitionId).subscribe({
+        next: (resp) => {
+          this.status.set('active');
+          this.exhibition.set(resp.exhibition);
+        },
+        error: () => this.status.set('none'),
+      });
+      return;
+    }
+
     this.api.getActiveExhibition().subscribe({
       next: (resp) => {
         if (resp.status === 'closed') {
           this.router.navigate(['/closed'], { state: { lastExhibition: resp.lastExhibition } });
+          return;
+        }
+        if (resp.status === 'multiple') {
+          this.router.navigate(['/pick'], { state: { exhibitions: resp.exhibitions } });
           return;
         }
         this.status.set(resp.status === 'active' ? 'active' : 'none');
@@ -101,21 +109,9 @@ export class Survey implements OnInit {
     this.submitting.set(true);
     this.submitError.set(false);
 
-    const all = this.answers();
-    const fixedAnswers: Record<string, unknown> = {};
-    const variableAnswers: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(all)) {
-      if (FIXED_QUESTION_KEYS.has(k)) {
-        fixedAnswers[k] = v;
-      } else {
-        variableAnswers[k] = v;
-      }
-    }
-
     const payload: SubmitResponsePayload = {
       exhibitionId: this.exhibition()!.exhibitionId,
-      fixedAnswers,
-      variableAnswers,
+      answers: this.answers(),
     };
 
     this.api.submitResponse(payload).subscribe({

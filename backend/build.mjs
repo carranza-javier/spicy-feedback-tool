@@ -14,11 +14,14 @@ const entryPoints = [
   'src/handlers/createExhibition.mjs',
   'src/handlers/exportResponsesCsv.mjs',
   'src/handlers/getActiveExhibition.mjs',
+  'src/handlers/getExhibitionById.mjs',
   'src/handlers/listExhibitions.mjs',
+  'src/handlers/listQuestionTemplates.mjs',
   'src/handlers/listResponses.mjs',
   'src/handlers/login.mjs',
   'src/handlers/postResponse.mjs',
   'src/handlers/updateExhibition.mjs',
+  'src/handlers/updateQuestionTemplate.mjs',
 ];
 
 await esbuild.build({

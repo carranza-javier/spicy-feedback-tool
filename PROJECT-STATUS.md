@@ -8,8 +8,9 @@
 
 ## Current phase / next step
 
-**Phase:** Phase 7 complete — AWS backend is live, local dev wired to it.
-Ready for production GitHub Pages deploy + real admin password handoff.
+**Phase:** Question-system redesign complete and verified live against AWS
+(terraform applied, templates seeded, full e2e pass done). Ready for
+production GitHub Pages deploy + real admin password handoff.
 
 **Resume here:**
 
@@ -25,6 +26,12 @@ Ready for production GitHub Pages deploy + real admin password handoff.
    (Current `test1234` hash is throwaway — never use in production.)
 3. **End-to-end test on production URL** — QR code → survey → thank-you →
    admin login → exhibitions list → dashboard → CSV.
+4. **Create the real exhibition(s) through the admin panel** — the
+   `Exhibitions`/`Responses` tables were wiped as part of the redesign (see
+   below); there is no seeded exhibition anymore, only the 9
+   `QuestionTemplates` rows. Simon's first real exhibition should be created
+   through "+ Neu" so its question list is populated from the current
+   templates.
 
 ---
 
@@ -470,6 +477,191 @@ Ready for production GitHub Pages deploy + real admin password handoff.
       number 1–5. Verified `tsc --noEmit` clean and confirmed directly
       against the dev server's freshly rebuilt bundle that zero `shimmer`
       references remain.
+- [x] **Repo pushed to GitHub — version control established.** Previously
+      the whole project only existed as a local working directory with no
+      git history. Ran a security check before anything was committed:
+      audited `.gitignore` against Terraform state/vars/crash-logs, Node
+      `node_modules`/build output, and secrets — found `frontend/dist/`
+      and `frontend/.angular/` were **not** covered (only `backend/dist/`
+      was), and there was no `.env`/`.pem`/`.key` rule at all. Patched
+      `.gitignore` to close those gaps before running `git init`. Verified
+      with `git add -A -n` (dry run) that none of the sensitive/build
+      paths appeared in what would be staged, and manually checked the
+      handful of borderline files (`frontend/.vscode/mcp.json` — just the
+      Angular CLI MCP launch command, no tokens; `environment.ts` /
+      `environment.development.ts` — only the public API Gateway URL, not
+      a secret) before getting sign-off on the full 89-file list.
+      Initialized git, committed as `9145618` ("Working state before
+      question-system redesign"), added remote `origin` →
+      `https://github.com/carranza-javier/spicy-feedback-tool.git`, and
+      pushed to `main`. The JWT secret was never in a local file to begin
+      with (lives only in AWS SSM Parameter Store — see Notes/gotchas
+      below), so it was never at risk of being committed.
+- [x] **Fixed scale questions standardised to a 1–6 range.**
+      `question-defs.ts`'s three `type: 'scale'` fixed questions —
+      `emotionExhibition` (was 0–10), `chiliRating` (was 1–5), `websiteEase`
+      (was 0–10) — all now `min: 1, max: 6`. Matching fallback defaults
+      updated in `survey.html` (`q.min ?? 1` / `q.max ?? 6` for both the
+      `app-chili-question` and `app-scale-question` branches) and
+      `ChiliQuestion`'s own default `max` input (was 5). No backend or
+      dashboard changes needed: `postResponse.mjs`/`validation.mjs` never
+      constrain fixed-answer numeric ranges, and `dashboard.ts`'s scale
+      aggregation already derives `min`/`max` from `q.min ?? 0` /
+      `q.max ?? 10` per question rather than hardcoding 0–10 or 1–5, so it
+      picks up the new range automatically. Admin-created (variable)
+      scale questions are untouched — their range stays admin-configurable
+      per exhibition (`exhibition-edit.ts` default 0–10), not a fixed spec
+      value. `SPEC.md` §4 and §8 updated to say 1–6 instead of 1–5/0–10.
+      Verified `tsc --noEmit` clean.
+- [x] **MAJOR REDESIGN — question system is now fully DB-driven and
+      admin-editable; overlapping-active exhibitions get a picker screen.**
+      Previously 9 questions were hardcoded in the frontend
+      (`FIXED_PAGES`/`FIXED_QUESTION_KEYS` in `question-defs.ts`, duplicated
+      again as `FIXED_KEYS` in `exportResponsesCsv.mjs`) and not editable by
+      Simon at all; only admin-added "variable" questions were DB-stored.
+      That whole split is gone. Plan file (for full design rationale):
+      `curious-leaping-oasis.md` in the Claude plans directory.
+
+      **Data model.** New DynamoDB table `QuestionTemplates` (PK
+      `templateId`) holds Simon's 9 questions as reusable templates —
+      `{ templateId, text, type, section, order, min?, max?, labelMin?,
+      labelMax?, options?: {id,text}[], displayVariant? }`. `Exhibitions`'
+      `variableQuestions` field is renamed/generalised to `questions:
+      Question[]` — one flat, per-exhibition-owned list combining
+      template-derived and freeform questions alike, disambiguated only by
+      `section`/`order`. `Responses`' `fixedAnswers`/`variableAnswers` split
+      collapsed into a single `answers: Record<string, unknown>` keyed by
+      question id. Checkbox/slider options are now stable `{id, text}`
+      pairs — stored answers reference the **id**, never the text — which
+      fixes a real fragility flagged in this file previously (renaming an
+      option's text used to silently drop historical responses from
+      aggregation, because counting was keyed by text).
+
+      **Sections are a fixed constant, not DB data** — new
+      `frontend/src/app/shared/sections.ts` (and a duplicate
+      `backend/src/lib/sections.mjs`, matching this codebase's existing
+      `FIXED_KEYS`-style duplication pattern): `exhibition`/`spicy`/
+      `person`/`homepage`, same 4 titles as the old hardcoded pages. Admins
+      can reassign which section any question belongs to; the 4 sections
+      themselves aren't editable.
+
+      **Copy-on-create is client-side, not server-side** — this was the key
+      simplification found during planning. Opening "+ New exhibition"
+      fetches `GET /admin/question-templates` and pre-populates the
+      question form from them (fresh per-exhibition ids generated right
+      there). Whatever gets saved becomes that exhibition's own independent
+      question list forever after; `createExhibition.mjs` needed no special
+      template-copying logic at all — it's the same validate-and-store path
+      as before, just with `questions` instead of `variableQuestions`.
+      Editing a template later (new `admin/question-templates/` screen,
+      list + edit only, no create/delete since the set of 9 stays fixed)
+      never touches any existing exhibition.
+
+      **Overlap picker.** `getActiveExhibition.mjs` used to `.find()` the
+      first active exhibition with zero handling for two being active at
+      once (overlapping date ranges) — a real gap, not hypothetical, found
+      during exploration. Now collects *all* matches: 0 → same closed/none
+      logic; 1 → `status: 'active'` as before; 2+ → new `status: 'multiple'`
+      with a lightweight exhibitions list. New public route `GET
+      /exhibitions/{exhibitionId}` (enforces the active-date check
+      server-side, 404s otherwise — it's unauthenticated, so it must not
+      become a way to probe non-active exhibitions) backs a new
+      `public/exhibition-picker/` screen (`/pick` route) the visitor lands
+      on when multiple exhibitions are active; picking one routes to the
+      new parametrized `survey/:exhibitionId` route.
+
+      **Backend files touched:** `getActiveExhibition.mjs` (overlap
+      detection), `getExhibitionById.mjs` / `listQuestionTemplates.mjs` /
+      `updateQuestionTemplate.mjs` (new), `postResponse.mjs` /
+      `createExhibition.mjs` / `updateExhibition.mjs` (field renames),
+      `exportResponsesCsv.mjs` (rewritten — no more hardcoded fixed-key
+      list; iterates `exhibition.questions` uniformly, resolves option ids
+      back to text for cells), `validation.mjs` (unified `validateExhibition`
+      question-shape rules, shared between exhibition questions and
+      standalone templates via a new `validateQuestionShape` helper),
+      `sections.mjs` (new). **Gotcha hit during verification:** DynamoDB has
+      a large, non-obvious reserved-word list — `section`, `order`, `min`,
+      and more collided with plain `UpdateExpression` attribute names in
+      `updateQuestionTemplate.mjs` (500s, one word at a time, via
+      `ValidationException: ... reserved keyword: X`). Fixed by aliasing
+      **every** attribute name in that expression rather than guessing which
+      ones are safe.
+
+      **Frontend files touched:** `core/services/api.ts` (types), shared
+      `sections.ts` (new), `question-defs.ts` (shrunk to just a
+      `groupBySection()` helper — `FIXED_PAGES`/`FIXED_QUESTION_KEYS`/
+      `mapVariableQuestion` deleted), `checkbox-question`/`distance-slider`
+      (contract changed from plain option text to `{id,text}`, selecting/
+      emitting by id, rendering `.text`), `public/survey/` (dynamic page
+      count via `groupBySection`, not a hardcoded `4`; chili detection via
+      `q.displayVariant === 'chili'` instead of a `q.key === 'chiliRating'`
+      magic string; `submit()` builds one flat `answers` object),
+      `public/exhibition-picker/` (new), `admin/exhibition-edit/` (question
+      FormArray gained a `section` select and a nested `{id,text}` options
+      FormArray instead of a textarea; create mode pre-populates from
+      templates), `admin/question-templates/` (new), `admin/dashboard/`
+      (`buildPageResults` groups by section; checkbox/slider aggregation
+      counts by option id, resolving display text at read time — this is
+      what actually fixes the rename-drops-history bug).
+
+      **Verified live end-to-end** against the real deployed AWS API
+      (`terraform apply`: 16 added/10 changed/0 destroyed; ran
+      `backend/scripts/seed-templates.mjs` to seed the 9 templates and wipe
+      the pre-redesign test Exhibitions/Responses data — confirmed
+      disposable beforehand) via a scripted Playwright session: template
+      edit + revert, exhibition creation pre-populated correctly from all 9
+      templates grouped into 4 sections, reassigning a question's section
+      persisted correctly, a freeform variable checkbox question, the
+      overlap picker triggered correctly with 2 simultaneously-active test
+      exhibitions, full survey submission, and the dashboard aggregating
+      correctly — including confirming checkbox/slider counts still
+      resolve correctly by id. CSV export spot-checked directly: headers
+      and cells show resolved option text, not raw ids. Test
+      exhibitions/response created during verification were deleted
+      afterward (no delete API exists yet, so this was done via direct
+      `aws dynamodb delete-item`).
+- [x] **Questions locked once an exhibition has ≥1 response.** Addendum to
+      the redesign above — prevents an admin from corrupting already-
+      collected data by editing/adding/removing questions, type, range, or
+      options after responses exist. name/startDate/endDate stay editable
+      regardless, and viewing results is always allowed.
+      **Backend is the authoritative guard** (`updateExhibition.mjs`): a
+      cheap `Limit: 1` Query against `Responses` checks existence; if found,
+      fetches the currently-stored `questions` and rejects the request with
+      `409` unless the submitted `questions` array is deep-equal to what's
+      stored (order-independent comparison, sorted by id, via a new
+      `canonicalizeQuestions`/`questionsEqual` helper in the handler — not
+      naive `JSON.stringify`, since object/array key order isn't guaranteed
+      to round-trip identically). This is enforced regardless of what the
+      frontend does — verified directly with a raw `fetch()` PUT bypassing
+      the UI entirely, confirmed `409` with the expected message.
+      **Frontend reuses `AdminExhibition.responseCount`** (already computed
+      by `listExhibitions.mjs`, no separate count call) to disable the
+      question `FormArray` (`exhibition-edit.ts`'s new `applyLockState()`)
+      and hide all add/remove buttons, showing a notice instead. Angular's
+      `FormArray.disable()` cascades to every nested control including each
+      question's own options sub-array; disabled controls still submit
+      their value via `getRawValue()`, so a locked exhibition's unchanged
+      `questions` round-trips through `buildPayload()` exactly as stored,
+      satisfying the backend's equality check on save (e.g. a name-only
+      edit while locked still succeeds).
+      **Real bug caught during verification, not hypothetical:** the
+      existing "fast path" (router state passed from the exhibitions list,
+      read via raw `window.history.state`) can go stale — the browser keeps
+      that state for a given history entry indefinitely, including across a
+      page reload, and it reflects whatever `responseCount` was true at the
+      moment the admin clicked "Bearbeiten," not now. A scripted test that
+      submitted a response *after* opening the edit screen and then
+      reloaded caught this directly: the questions section stayed
+      incorrectly unlocked. Fixed by always re-verifying the response count
+      fresh via `listAdminExhibitions()` after using the fast path for
+      content — `populate()` applies the (possibly-stale) cached lock state
+      immediately for fast initial render, then a follow-up fetch corrects
+      it moments later if needed. This means there's a brief window where a
+      just-locked exhibition can render as editable before the correction
+      lands — accepted as fine given the backend rejects any actual save
+      regardless, and this project's admin panel is used only a few times a
+      year (not worth blocking the whole form on that round-trip).
 
 ---
 

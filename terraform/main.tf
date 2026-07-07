@@ -45,6 +45,21 @@ locals {
       description = "Export responses as CSV (admin)"
       needs_jwt   = false
     }
+    list_question_templates = {
+      handler     = "handlers/listQuestionTemplates.handler"
+      description = "List question templates (admin)"
+      needs_jwt   = false
+    }
+    update_question_template = {
+      handler     = "handlers/updateQuestionTemplate.handler"
+      description = "Edit a question template (admin)"
+      needs_jwt   = false
+    }
+    get_exhibition_by_id = {
+      handler     = "handlers/getExhibitionById.handler"
+      description = "Return a specific active exhibition"
+      needs_jwt   = false
+    }
   }
 }
 
@@ -102,6 +117,7 @@ data "aws_iam_policy_document" "dynamo_access" {
       aws_dynamodb_table.exhibitions.arn,
       aws_dynamodb_table.responses.arn,
       aws_dynamodb_table.admins.arn,
+      aws_dynamodb_table.question_templates.arn,
     ]
   }
 }
@@ -153,6 +169,17 @@ resource "aws_dynamodb_table" "admins" {
   }
 }
 
+resource "aws_dynamodb_table" "question_templates" {
+  name         = "QuestionTemplates"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "templateId"
+
+  attribute {
+    name = "templateId"
+    type = "S"
+  }
+}
+
 # ── CloudWatch Log Groups ─────────────────────────────────────────────────────
 
 resource "aws_cloudwatch_log_group" "handlers" {
@@ -184,9 +211,10 @@ resource "aws_lambda_function" "handlers" {
   environment {
     variables = merge(
       {
-        EXHIBITIONS_TABLE = aws_dynamodb_table.exhibitions.name
-        RESPONSES_TABLE   = aws_dynamodb_table.responses.name
-        ADMINS_TABLE      = aws_dynamodb_table.admins.name
+        EXHIBITIONS_TABLE       = aws_dynamodb_table.exhibitions.name
+        RESPONSES_TABLE         = aws_dynamodb_table.responses.name
+        ADMINS_TABLE            = aws_dynamodb_table.admins.name
+        QUESTION_TEMPLATES_TABLE = aws_dynamodb_table.question_templates.name
       },
       each.value.needs_jwt ? { JWT_SECRET = data.aws_ssm_parameter.jwt_secret.value } : {}
     )
@@ -309,6 +337,12 @@ resource "aws_apigatewayv2_route" "login" {
   target    = "integrations/${aws_apigatewayv2_integration.handlers["login"].id}"
 }
 
+resource "aws_apigatewayv2_route" "get_exhibition_by_id" {
+  api_id    = aws_apigatewayv2_api.main.id
+  route_key = "GET /exhibitions/{exhibitionId}"
+  target    = "integrations/${aws_apigatewayv2_integration.handlers["get_exhibition_by_id"].id}"
+}
+
 # Admin — JWT authorizer required
 
 resource "aws_apigatewayv2_route" "list_exhibitions" {
@@ -347,6 +381,22 @@ resource "aws_apigatewayv2_route" "export_responses_csv" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "GET /admin/exhibitions/{exhibitionId}/responses/csv"
   target             = "integrations/${aws_apigatewayv2_integration.handlers["export_responses_csv"].id}"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type = "CUSTOM"
+}
+
+resource "aws_apigatewayv2_route" "list_question_templates" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /admin/question-templates"
+  target             = "integrations/${aws_apigatewayv2_integration.handlers["list_question_templates"].id}"
+  authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
+  authorization_type = "CUSTOM"
+}
+
+resource "aws_apigatewayv2_route" "update_question_template" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "PUT /admin/question-templates/{templateId}"
+  target             = "integrations/${aws_apigatewayv2_integration.handlers["update_question_template"].id}"
   authorizer_id      = aws_apigatewayv2_authorizer.jwt.id
   authorization_type = "CUSTOM"
 }

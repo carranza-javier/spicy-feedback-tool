@@ -6,15 +6,38 @@ import { environment } from '../../../environments/environment';
 // ── Domain types ───────────────────────────────────────────────────────────────
 // These mirror the shapes returned/accepted by the Lambda handlers.
 
-export interface VariableQuestion {
+export interface QuestionOption {
   id: string;
   text: string;
-  type: 'scale' | 'checkbox' | 'text';
-  options?: string[];   // checkbox
-  min?: number;         // scale
-  max?: number;         // scale
-  labelMin?: string;    // scale
-  labelMax?: string;    // scale
+}
+
+export interface Question {
+  id: string;
+  text: string;
+  type: 'scale' | 'checkbox' | 'text' | 'slider';
+  section: string;       // one of the fixed SECTION_KEYS
+  order: number;         // position within its section
+  options?: QuestionOption[]; // checkbox / slider
+  min?: number;          // scale
+  max?: number;          // scale
+  labelMin?: string;     // scale
+  labelMax?: string;     // scale
+  displayVariant?: 'chili'; // cosmetic — chili rating renders as 🌶️ icons
+  sourceTemplateId?: string; // informational only, set when copied from a template
+}
+
+export interface QuestionTemplate {
+  templateId: string;
+  text: string;
+  type: 'scale' | 'checkbox' | 'text' | 'slider';
+  section: string;
+  order: number;
+  options?: QuestionOption[];
+  min?: number;
+  max?: number;
+  labelMin?: string;
+  labelMax?: string;
+  displayVariant?: 'chili';
 }
 
 export interface Exhibition {
@@ -22,35 +45,42 @@ export interface Exhibition {
   name: string;
   startDate: string;
   endDate: string;
-  variableQuestions: VariableQuestion[];
+  questions: Question[];
   createdAt: string;
 }
 
 export interface ActiveExhibitionResponse {
-  status: 'active' | 'closed' | 'none';
+  status: 'active' | 'multiple' | 'closed' | 'none';
   // Present when status === 'active'
   exhibition?: Exhibition;
+  // Present when status === 'multiple' (overlapping active exhibitions)
+  exhibitions?: { exhibitionId: string; name: string; startDate: string; endDate: string }[];
   // Present when status === 'closed'
   lastExhibition?: { exhibitionId: string; name: string; endDate: string };
 }
 
+export interface ExhibitionByIdResponse {
+  status: 'active';
+  exhibition: Exhibition;
+}
+
 export interface SubmitResponsePayload {
   exhibitionId: string;
-  fixedAnswers: Record<string, unknown>;
-  variableAnswers: Record<string, unknown>;
+  answers: Record<string, unknown>;
 }
 
 export interface AdminExhibition extends Exhibition {
   responseCount: number;
 }
 
-export type ExhibitionPayload = Pick<Exhibition, 'name' | 'startDate' | 'endDate' | 'variableQuestions'>;
+export type ExhibitionPayload = Pick<Exhibition, 'name' | 'startDate' | 'endDate' | 'questions'>;
+
+export type QuestionTemplatePayload = Omit<QuestionTemplate, 'templateId'>;
 
 export interface ResponseRecord {
   exhibitionId: string;
   responseId: string;
-  fixedAnswers: Record<string, unknown>;
-  variableAnswers: Record<string, unknown>;
+  answers: Record<string, unknown>;
   submittedAt: string;
 }
 
@@ -65,6 +95,10 @@ export class Api {
 
   getActiveExhibition(): Observable<ActiveExhibitionResponse> {
     return this.http.get<ActiveExhibitionResponse>(`${this.base}/exhibitions/active`);
+  }
+
+  getExhibitionById(exhibitionId: string): Observable<ExhibitionByIdResponse> {
+    return this.http.get<ExhibitionByIdResponse>(`${this.base}/exhibitions/${exhibitionId}`);
   }
 
   submitResponse(payload: SubmitResponsePayload): Observable<{ responseId: string }> {
@@ -100,5 +134,13 @@ export class Api {
       `${this.base}/admin/exhibitions/${exhibitionId}/responses/csv`,
       { responseType: 'text' }
     );
+  }
+
+  listQuestionTemplates(): Observable<{ templates: QuestionTemplate[] }> {
+    return this.http.get<{ templates: QuestionTemplate[] }>(`${this.base}/admin/question-templates`);
+  }
+
+  updateQuestionTemplate(templateId: string, payload: QuestionTemplatePayload): Observable<unknown> {
+    return this.http.put(`${this.base}/admin/question-templates/${templateId}`, payload);
   }
 }

@@ -1,14 +1,14 @@
 <div class="cq">
   <p class="cq__label">{{ label() }}</p>
   <div class="cq__options">
-    @for (opt of options(); track opt) {
+    @for (opt of options(); track opt.id) {
       <button
         class="cq__card"
         [class.cq__card--selected]="isSelected(opt)"
         type="button"
         [attr.aria-pressed]="isSelected(opt)"
         (click)="toggle(opt)"
-      >{{ opt }}</button>
+      >{{ opt.text }}</button>
     }
   </div>
 </div>

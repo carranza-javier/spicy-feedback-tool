@@ -1,0 +1,123 @@
+<div class="page ae qt">
+  <header class="ae__header">
+    <h1 class="ae__title">Fragen-Vorlagen</h1>
+    <button class="btn-back" type="button" (click)="router.navigate(['/admin/exhibitions'])">
+      ← Zurück
+    </button>
+  </header>
+
+  <p class="qt__hint">
+    Änderungen wirken sich nur auf künftig neu erstellte Ausstellungen aus — bestehende
+    Ausstellungen behalten ihre eigene, unabhängige Kopie der Frage.
+  </p>
+
+  @if (loading()) {
+    <p class="ae__state">Laden…</p>
+  } @else {
+    @if (error()) {
+      <p class="ae__error">{{ error() }}</p>
+    }
+
+    @for (section of sections; track section.key) {
+      @if (groupsForSection(section.key).length > 0) {
+        <section class="ae__section">
+          <h2 class="ae__sub">{{ section.title }}</h2>
+
+          <div class="ae__vq-list">
+            @for (g of groupsForSection(section.key); track g) {
+              <div class="vq-card" [formGroup]="g">
+                <div class="field">
+                  <label class="field__label">Fragetext</label>
+                  <input class="field__input" type="text" formControlName="text">
+                </div>
+
+                <div class="field-row">
+                  <div class="field">
+                    <label class="field__label">Typ</label>
+                    <select class="field__select" formControlName="type">
+                      <option value="text">Freitext</option>
+                      <option value="scale">Skala</option>
+                      <option value="checkbox">Mehrfachauswahl</option>
+                      <option value="slider">Schieberegler</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label class="field__label">Abschnitt</label>
+                    <select class="field__select" formControlName="section">
+                      @for (s of sections; track s.key) {
+                        <option [value]="s.key">{{ s.title }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+
+                @switch (getType(g)) {
+                  @case ('scale') {
+                    <div class="vq-card__scale-config">
+                      <div class="field-row">
+                        <div class="field">
+                          <label class="field__label">Min</label>
+                          <input class="field__input" type="number" formControlName="min">
+                        </div>
+                        <div class="field">
+                          <label class="field__label">Max</label>
+                          <input class="field__input" type="number" formControlName="max">
+                        </div>
+                      </div>
+                      <div class="field-row">
+                        <div class="field">
+                          <label class="field__label">Label links</label>
+                          <input class="field__input" type="text" formControlName="labelMin">
+                        </div>
+                        <div class="field">
+                          <label class="field__label">Label rechts</label>
+                          <input class="field__input" type="text" formControlName="labelMax">
+                        </div>
+                      </div>
+                    </div>
+                  }
+                  @case ('checkbox') {
+                    <div class="vq-card__options" formArrayName="options">
+                      <label class="field__label">Optionen</label>
+                      @for (opt of optionsArray(g).controls; track opt; let oi = $index) {
+                        <div class="opt-row" [formGroup]="opt">
+                          <input class="field__input" type="text" formControlName="text">
+                          <button class="btn-remove" type="button" (click)="removeOption(g, oi)">✕</button>
+                        </div>
+                      }
+                      <button class="btn-add-q" type="button" (click)="addOption(g)">+ Option hinzufügen</button>
+                    </div>
+                  }
+                  @case ('slider') {
+                    <div class="vq-card__options" formArrayName="options">
+                      <label class="field__label">Schritte <span class="field__hint">(in Reihenfolge)</span></label>
+                      @for (opt of optionsArray(g).controls; track opt; let oi = $index) {
+                        <div class="opt-row" [formGroup]="opt">
+                          <input class="field__input" type="text" formControlName="text">
+                          <button class="btn-remove" type="button" (click)="removeOption(g, oi)">✕</button>
+                        </div>
+                      }
+                      <button class="btn-add-q" type="button" (click)="addOption(g)">+ Schritt hinzufügen</button>
+                    </div>
+                  }
+                }
+
+                <div class="vq-card__save-row">
+                  <button
+                    class="btn-row"
+                    type="button"
+                    [disabled]="savingId() === g.value.templateId"
+                    (click)="save(g)"
+                  >{{ savingId() === g.value.templateId ? 'Speichern…' : 'Speichern' }}</button>
+                  @if (savedId() === g.value.templateId) {
+                    <span class="qt__saved">Gespeichert.</span>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </section>
+      }
+    }
+  }
+</div>

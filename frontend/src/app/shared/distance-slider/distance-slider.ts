@@ -1,4 +1,5 @@
 import { Component, computed, input, output, signal } from '@angular/core';
+import { QuestionOption } from '../../core/services/api';
 
 @Component({
   selector: 'app-distance-slider',
@@ -8,10 +9,10 @@ import { Component, computed, input, output, signal } from '@angular/core';
 })
 export class DistanceSlider {
   readonly label   = input.required<string>();
-  readonly options = input.required<string[]>();
-  readonly value   = input<string | null>(null);
+  readonly options = input.required<QuestionOption[]>();
+  readonly value   = input<string | null>(null); // selected option id
 
-  readonly valueChange = output<string>();
+  readonly valueChange = output<string>(); // option id
 
   // Continuous raw position (float, [0, maxIndex]) — the native input uses
   // step="any" so the thumb itself glides freely under the pointer. Only
@@ -27,7 +28,7 @@ export class DistanceSlider {
   readonly currentRaw = computed(() => {
     const local = this.localRaw();
     if (local !== null) return local;
-    const fromValue = this.options().indexOf(this.value() ?? '');
+    const fromValue = this.options().findIndex((o) => o.id === this.value());
     return fromValue >= 0 ? fromValue : 0;
   });
 
@@ -37,7 +38,7 @@ export class DistanceSlider {
 
   readonly touched = computed(() => this.localRaw() !== null || this.value() !== null);
 
-  readonly currentLabel = computed(() => this.options()[this.nearestIndex()] ?? '');
+  readonly currentLabel = computed(() => this.options()[this.nearestIndex()]?.text ?? '');
 
   // Fill bar tracks the raw continuous position, not the snapped index, so
   // it stays visually in sync with the native thumb's actual glide.
@@ -48,7 +49,7 @@ export class DistanceSlider {
   onInput(event: Event): void {
     const raw = Number((event.target as HTMLInputElement).value);
     this.localRaw.set(raw);
-    const label = this.options()[Math.round(raw)];
-    if (label !== undefined) this.valueChange.emit(label);
+    const opt = this.options()[Math.round(raw)];
+    if (opt !== undefined) this.valueChange.emit(opt.id);
   }
 }

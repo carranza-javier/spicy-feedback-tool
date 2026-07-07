@@ -9,7 +9,7 @@ import { Component, computed, input, output, signal } from '@angular/core';
 export class ChiliQuestion {
   readonly label = input.required<string>();
   readonly min   = input<number>(1);
-  readonly max   = input<number>(5);
+  readonly max   = input<number>(6);
   readonly value = input<number | null>(null);
 
   readonly valueChange = output<number>();

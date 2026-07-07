@@ -14,6 +14,12 @@ export const ADMIN_ROUTES: Routes = [
       import('./exhibitions-list/exhibitions-list').then((m) => m.ExhibitionsList),
   },
   {
+    path: 'question-templates',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./question-templates/question-templates').then((m) => m.QuestionTemplates),
+  },
+  {
     path: 'exhibitions/new',
     canActivate: [authGuard],
     loadComponent: () =>

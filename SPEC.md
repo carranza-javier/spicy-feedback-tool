@@ -87,7 +87,7 @@ fixedAnswers: {
   emotionExhibition: number,      // scale
   noteToArtist: string,           // free text
   whatYouValue: string,           // free text
-  chiliRating: number,            // scale (1-5)
+  chiliRating: number,            // scale (1-6)
   whatConvinces: string[],        // checkbox multi-select
   visitorType: string[],          // checkbox multi-select
   distanceTravelled: number,      // scale
@@ -134,7 +134,7 @@ These come from the original client document. They are the **same for every exhi
 
 ### Section 2 — zu spicy (about spicy)
 
-- **Scale:** chili rating, 1–5 🌶.
+- **Scale:** chili rating, 1–6 🌶.
 - **Checkbox (multi-select):** what convinces you about spicy — 8 options (24/7 access, low-threshold access to art, current art selection, digital exhibition information, participatory impulses, inclusion of people on site, connection of art and nature, location in the villa park).
 
 ### Section 3 — Zur Person (about you)
@@ -182,7 +182,7 @@ The form must look **identical to the existing spicy website** so the subdomain 
 - **Four pages**, one per section of the questionnaire.
 - A **"Weiter"** (Next) button between pages; **"Absenden"** (Submit) on the final page.
 - A thin **progress bar** at the top (black/grey).
-- Scale questions: range is configurable per question (e.g. 1–5 for chili rating, 0–10 for others). Boxes flex-fill the row so any step count fits in a single row on a ~400px phone — no horizontal scroll or range reduction needed.
+- Scale questions: range is configurable per question. All fixed scale questions (chili rating, emotion, website ease) use a 1–6 range. Boxes flex-fill the row so any step count fits in a single row on a ~400px phone — no horizontal scroll or range reduction needed.
 
 ### Thank-you screen
 

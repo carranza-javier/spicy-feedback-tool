@@ -1,4 +1,5 @@
 import { Component, input, output } from '@angular/core';
+import { QuestionOption } from '../../core/services/api';
 
 @Component({
   selector: 'app-checkbox-question',
@@ -8,20 +9,20 @@ import { Component, input, output } from '@angular/core';
 })
 export class CheckboxQuestion {
   readonly label    = input.required<string>();
-  readonly options  = input.required<string[]>();
-  readonly selected = input<string[]>([]);
+  readonly options  = input.required<QuestionOption[]>();
+  readonly selected = input<string[]>([]); // selected option ids
 
   readonly selectedChange = output<string[]>();
 
-  isSelected(opt: string): boolean {
-    return this.selected().includes(opt);
+  isSelected(opt: QuestionOption): boolean {
+    return this.selected().includes(opt.id);
   }
 
-  toggle(opt: string): void {
+  toggle(opt: QuestionOption): void {
     const current = this.selected();
-    const next = current.includes(opt)
-      ? current.filter(o => o !== opt)
-      : [...current, opt];
+    const next = current.includes(opt.id)
+      ? current.filter(id => id !== opt.id)
+      : [...current, opt.id];
     this.selectedChange.emit(next);
   }
 }

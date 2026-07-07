@@ -3,19 +3,14 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { ChartData, ChartOptions } from 'chart.js';
-import { Api, AdminExhibition, ResponseRecord } from '../../core/services/api';
+import { Api, AdminExhibition, Question, ResponseRecord } from '../../core/services/api';
 import { BarChart } from '../../shared/bar-chart/bar-chart';
-import {
-  FIXED_PAGES,
-  FIXED_QUESTION_KEYS,
-  QuestionDef,
-  mapVariableQuestion,
-} from '../../shared/question-defs';
+import { groupBySection } from '../../shared/question-defs';
 
 // ── Result types ───────────────────────────────────────────────────────────────
 
 interface QuestionEntry {
-  question: QuestionDef;
+  question: Question;
   entryType: 'scale' | 'checkbox' | 'text' | 'slider';
   // scale + checkbox + slider: defined when entryType !== 'text'
   chartData?: ChartData<'bar'>;
@@ -107,7 +102,7 @@ function checkboxChartOptions(answeredCount: number): ChartOptions<'bar'> {
 
 // ── Aggregation helpers ────────────────────────────────────────────────────────
 
-function aggregateQuestion(q: QuestionDef, rawValues: unknown[]): QuestionEntry {
+function aggregateQuestion(q: Question, rawValues: unknown[]): QuestionEntry {
   if (q.type === 'scale') {
     const min   = q.min ?? 0;
     const max   = q.max ?? 10;
@@ -147,15 +142,18 @@ function aggregateQuestion(q: QuestionDef, rawValues: unknown[]): QuestionEntry 
   }
 
   if (q.type === 'checkbox') {
+    // Counting is keyed by option ID, not text — an option's display text
+    // can be edited later without silently dropping historical responses
+    // that selected it (they still reference the same stable id).
     const options = q.options ?? [];
-    const counts  = new Map<string, number>(options.map((o) => [o, 0]));
+    const counts  = new Map<string, number>(options.map((o) => [o.id, 0]));
     let answeredCount = 0;
 
     for (const v of rawValues) {
       if (Array.isArray(v) && v.length > 0) {
         answeredCount++;
-        for (const opt of v as string[]) {
-          if (counts.has(opt)) counts.set(opt, (counts.get(opt) ?? 0) + 1);
+        for (const optId of v as string[]) {
+          if (counts.has(optId)) counts.set(optId, (counts.get(optId) ?? 0) + 1);
         }
       }
     }
@@ -166,9 +164,9 @@ function aggregateQuestion(q: QuestionDef, rawValues: unknown[]): QuestionEntry 
     // needed, the question label is the title, and the accent stays
     // reserved for the scale charts' average.
     const chartData: ChartData<'bar'> = {
-      labels: options,
+      labels: options.map((o) => o.text),
       datasets: [{
-        data: options.map((o) => counts.get(o) ?? 0),
+        data: options.map((o) => counts.get(o.id) ?? 0),
         backgroundColor: CHECKBOX_BASE,
         borderRadius: 4,
         maxBarThickness: 22,
@@ -178,13 +176,14 @@ function aggregateQuestion(q: QuestionDef, rawValues: unknown[]): QuestionEntry 
   }
 
   if (q.type === 'slider') {
-    // Labelled-category distribution — one stored string value per response,
+    // Labelled-category distribution — one stored option id per response,
     // counted against the question's own stops in their natural (non-
     // alphabetical, non-numeric) order, e.g. distanceTravelled's
     // "20m" → "200km". No average: averaging category labels is meaningless,
-    // unlike a real numeric scale.
+    // unlike a real numeric scale. Same id-based counting as checkbox, for
+    // the same reason.
     const options = q.options ?? [];
-    const counts  = new Map<string, number>(options.map((o) => [o, 0]));
+    const counts  = new Map<string, number>(options.map((o) => [o.id, 0]));
     let answeredCount = 0;
 
     for (const v of rawValues) {
@@ -195,9 +194,9 @@ function aggregateQuestion(q: QuestionDef, rawValues: unknown[]): QuestionEntry 
     }
 
     const chartData: ChartData<'bar'> = {
-      labels: options,
+      labels: options.map((o) => o.text),
       datasets: [{
-        data: options.map((o) => counts.get(o) ?? 0),
+        data: options.map((o) => counts.get(o.id) ?? 0),
         backgroundColor: SCALE_BASE,
         borderRadius: 4,
         maxBarThickness: 28,
@@ -212,18 +211,11 @@ function aggregateQuestion(q: QuestionDef, rawValues: unknown[]): QuestionEntry 
 }
 
 function buildPageResults(exhibition: AdminExhibition, responses: ResponseRecord[]): PageResult[] {
-  const [p1, ...rest] = FIXED_PAGES;
-  const vqs  = exhibition.variableQuestions ?? [];
-  const pages = [
-    { ...p1, questions: [...p1.questions, ...vqs.map(mapVariableQuestion)] },
-    ...rest,
-  ];
-
+  const pages = groupBySection(exhibition.questions ?? []);
   return pages.map((page) => ({
     title: page.title,
     questions: page.questions.map((q) => {
-      const isFixed   = FIXED_QUESTION_KEYS.has(q.key);
-      const rawValues = responses.map((r) => isFixed ? r.fixedAnswers[q.key] : r.variableAnswers[q.key]);
+      const rawValues = responses.map((r) => r.answers[q.id]);
       return aggregateQuestion(q, rawValues);
     }),
   }));
@@ -285,7 +277,7 @@ export class Dashboard implements OnInit {
   }
 
   // Height in px for a horizontal bar chart with n options.
-  checkboxHeight(q: QuestionDef): number {
+  checkboxHeight(q: Question): number {
     return Math.max(120, (q.options?.length ?? 4) * 36 + 24);
   }
 

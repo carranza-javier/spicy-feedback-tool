@@ -7,19 +7,60 @@ import {
   Validators,
 } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Api, AdminExhibition, ExhibitionPayload, VariableQuestion } from '../../core/services/api';
+import {
+  Api,
+  AdminExhibition,
+  ExhibitionPayload,
+  Question,
+  QuestionOption,
+  QuestionTemplate,
+} from '../../core/services/api';
+import { SECTIONS, SECTION_KEYS } from '../../shared/sections';
 
-function makeQuestionGroup(vq?: VariableQuestion): FormGroup {
+function makeOptionGroup(opt?: QuestionOption): FormGroup {
   return new FormGroup({
-    id:          new FormControl(vq?.id ?? `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
-    text:        new FormControl(vq?.text ?? '', Validators.required),
-    type:        new FormControl<'scale' | 'checkbox' | 'text'>(vq?.type ?? 'text'),
-    min:         new FormControl<number | null>(vq?.min ?? 0),
-    max:         new FormControl<number | null>(vq?.max ?? 10),
-    labelMin:    new FormControl(vq?.labelMin ?? ''),
-    labelMax:    new FormControl(vq?.labelMax ?? ''),
-    optionsText: new FormControl(vq ? (vq.options ?? []).join('\n') : ''),
+    id:   new FormControl(opt?.id ?? `opt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+    text: new FormControl(opt?.text ?? ''),
   });
+}
+
+function makeQuestionGroup(q?: Question): FormGroup {
+  return new FormGroup({
+    id:               new FormControl(q?.id ?? `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`),
+    text:             new FormControl(q?.text ?? '', Validators.required),
+    type:             new FormControl<Question['type']>(q?.type ?? 'text'),
+    section:          new FormControl<string>(q?.section ?? SECTIONS[0].key),
+    min:              new FormControl<number | null>(q?.min ?? 0),
+    max:              new FormControl<number | null>(q?.max ?? 10),
+    labelMin:         new FormControl(q?.labelMin ?? ''),
+    labelMax:         new FormControl(q?.labelMax ?? ''),
+    options:          new FormArray<FormGroup>((q?.options ?? []).map(makeOptionGroup)),
+    // Not admin-editable through this form — carried through untouched so
+    // saving an existing question never loses its cosmetic/provenance info.
+    displayVariant:   new FormControl<'chili' | null>(q?.displayVariant ?? null),
+    sourceTemplateId: new FormControl<string | null>(q?.sourceTemplateId ?? null),
+  });
+}
+
+// A new exhibition's question list starts as fresh, independent copies of
+// the question templates — copying happens here, client-side, not on the
+// server. Each copy gets its own id; editing it afterwards never touches
+// the template or any other exhibition.
+function mapTemplateToQuestion(t: QuestionTemplate): Question {
+  return {
+    id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    text: t.text,
+    type: t.type,
+    section: t.section,
+    order: t.order,
+    options: t.options,
+    min: t.min,
+    max: t.max,
+    labelMin: t.labelMin,
+    labelMax: t.labelMax,
+    displayVariant: t.displayVariant,
+    sourceTemplateId: t.templateId,
+  };
 }
 
 @Component({
@@ -34,36 +75,72 @@ export class ExhibitionEdit implements OnInit {
   // router is used in template (back button) so not marked private.
   readonly router = inject(Router);
 
+  readonly sections = SECTIONS;
+
   readonly mode    = signal<'create' | 'edit'>('create');
   readonly loading = signal(false);
   readonly saving  = signal(false);
   readonly error   = signal<string | null>(null);
 
+  // Once an exhibition has ≥1 response, its questions are locked — this is
+  // a UX convenience only; updateExhibition.mjs enforces the same rule
+  // server-side regardless. Reuses the responseCount already computed by
+  // listExhibitions.mjs rather than issuing a separate count call.
+  readonly questionsLocked = signal(false);
+
   private exhibitionId: string | null = null;
 
   readonly form = new FormGroup({
-    name:              new FormControl('', { nonNullable: true, validators: Validators.required }),
-    startDate:         new FormControl('', { nonNullable: true, validators: Validators.required }),
-    endDate:           new FormControl('', { nonNullable: true, validators: Validators.required }),
-    variableQuestions: new FormArray<FormGroup>([]),
+    name:      new FormControl('', { nonNullable: true, validators: Validators.required }),
+    startDate: new FormControl('', { nonNullable: true, validators: Validators.required }),
+    endDate:   new FormControl('', { nonNullable: true, validators: Validators.required }),
+    questions: new FormArray<FormGroup>([]),
   });
 
-  get vqArray(): FormArray<FormGroup> {
-    return this.form.controls.variableQuestions;
+  get questionsArray(): FormArray<FormGroup> {
+    return this.form.controls.questions;
   }
 
-  // Returns the FormGroup at index i (used in the template to avoid casts there).
-  questionGroup(i: number): FormGroup {
-    return this.vqArray.at(i) as FormGroup;
+  // Questions grouped by section, for display — position in the flat
+  // FormArray still doubles as the per-section order (see buildPayload).
+  controlsForSection(sectionKey: string): { control: FormGroup; index: number }[] {
+    return this.questionsArray.controls
+      .map((control, index) => ({ control: control as FormGroup, index }))
+      .filter(({ control }) => control.get('section')?.value === sectionKey);
   }
 
-  getQuestionType(i: number): 'scale' | 'checkbox' | 'text' {
-    return this.vqArray.at(i).get('type')?.value ?? 'text';
+  getQuestionType(control: FormGroup): Question['type'] {
+    return control.get('type')?.value ?? 'text';
+  }
+
+  optionsArray(control: FormGroup): FormArray<FormGroup> {
+    return control.get('options') as FormArray<FormGroup>;
   }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
-    if (!id) return; // create mode
+    if (!id) {
+      // Create mode — pre-populate the question list from the current
+      // templates. This is a one-time copy: whatever gets saved becomes
+      // this exhibition's own independent question list.
+      this.loading.set(true);
+      this.api.listQuestionTemplates().subscribe({
+        next: ({ templates }) => {
+          const sorted = [...templates].sort((a, b) => {
+            const sd = SECTION_KEYS.indexOf(a.section) - SECTION_KEYS.indexOf(b.section);
+            return sd !== 0 ? sd : a.order - b.order;
+          });
+          for (const t of sorted) {
+            this.questionsArray.push(makeQuestionGroup(mapTemplateToQuestion(t)));
+          }
+          this.loading.set(false);
+        },
+        // Templates failing to load shouldn't block creating an exhibition —
+        // the admin can still build the question list from scratch.
+        error: () => this.loading.set(false),
+      });
+      return;
+    }
 
     this.mode.set('edit');
     this.exhibitionId = id;
@@ -72,6 +149,20 @@ export class ExhibitionEdit implements OnInit {
     const state = window.history.state as { exhibition?: AdminExhibition };
     if (state?.exhibition?.exhibitionId === id) {
       this.populate(state.exhibition);
+      // Router state can be stale — the browser keeps it for that history
+      // entry across a reload, and a response may have been submitted
+      // since the admin navigated here. A false "unlocked" questions
+      // section would defeat the point of the lock (the backend still
+      // rejects the write either way, but the UI shouldn't let an admin
+      // start editing questions it's about to reject). Always re-verify
+      // the response count fresh before trusting it.
+      this.api.listAdminExhibitions().subscribe({
+        next: ({ exhibitions }) => {
+          const fresh = exhibitions.find((e) => e.exhibitionId === id);
+          if (fresh) this.applyLockState(fresh.responseCount);
+        },
+        error: () => {}, // keep whatever populate() already applied from the cache
+      });
       return;
     }
 
@@ -96,18 +187,53 @@ export class ExhibitionEdit implements OnInit {
 
   private populate(ex: AdminExhibition): void {
     this.form.patchValue({ name: ex.name, startDate: ex.startDate, endDate: ex.endDate });
-    this.vqArray.clear();
-    for (const vq of ex.variableQuestions ?? []) {
-      this.vqArray.push(makeQuestionGroup(vq));
+    this.questionsArray.clear();
+    const sorted = [...(ex.questions ?? [])].sort((a, b) => {
+      const sd = SECTION_KEYS.indexOf(a.section) - SECTION_KEYS.indexOf(b.section);
+      return sd !== 0 ? sd : a.order - b.order;
+    });
+    for (const q of sorted) {
+      this.questionsArray.push(makeQuestionGroup(q));
+    }
+
+    this.applyLockState(ex.responseCount ?? 0);
+  }
+
+  // Disabling here cascades through the whole FormArray/FormGroup tree,
+  // including each question's own options FormArray — disabled controls
+  // still submit their value via getRawValue(), so the payload sent back
+  // on save is unchanged, which is exactly what the backend's equality
+  // check expects.
+  private applyLockState(responseCount: number): void {
+    const locked = responseCount > 0;
+    this.questionsLocked.set(locked);
+    if (locked) {
+      this.questionsArray.disable();
+    } else {
+      this.questionsArray.enable();
     }
   }
 
-  addQuestion(): void {
-    this.vqArray.push(makeQuestionGroup());
+  addQuestion(sectionKey: string): void {
+    if (this.questionsLocked()) return;
+    const group = makeQuestionGroup();
+    group.patchValue({ section: sectionKey });
+    this.questionsArray.push(group);
   }
 
   removeQuestion(i: number): void {
-    this.vqArray.removeAt(i);
+    if (this.questionsLocked()) return;
+    this.questionsArray.removeAt(i);
+  }
+
+  addOption(control: FormGroup): void {
+    if (this.questionsLocked()) return;
+    this.optionsArray(control).push(makeOptionGroup());
+  }
+
+  removeOption(control: FormGroup, i: number): void {
+    if (this.questionsLocked()) return;
+    this.optionsArray(control).removeAt(i);
   }
 
   save(): void {
@@ -132,24 +258,40 @@ export class ExhibitionEdit implements OnInit {
 
   private buildPayload(): ExhibitionPayload {
     const { name, startDate, endDate } = this.form.getRawValue();
-    const variableQuestions: VariableQuestion[] = this.vqArray.controls.map((ctrl) => {
+
+    // order = position among same-section questions, in current array
+    // order — there's no manual reorder control, so this is simply derived
+    // fresh from array position every save.
+    const orderBySection: Record<string, number> = {};
+
+    const questions: Question[] = this.questionsArray.controls.map((ctrl) => {
       const v = ctrl.getRawValue() as {
-        id: string; text: string; type: 'scale' | 'checkbox' | 'text';
-        min: number | null; max: number | null;
-        labelMin: string; labelMax: string; optionsText: string;
+        id: string; text: string; type: Question['type']; section: string;
+        min: number | null; max: number | null; labelMin: string; labelMax: string;
+        options: { id: string; text: string }[];
+        displayVariant: 'chili' | null; sourceTemplateId: string | null;
       };
-      const q: VariableQuestion = { id: v.id, text: v.text, type: v.type };
+
+      const order = orderBySection[v.section] ?? 0;
+      orderBySection[v.section] = order + 1;
+
+      const q: Question = { id: v.id, text: v.text, type: v.type, section: v.section, order };
       if (v.type === 'scale') {
         q.min      = v.min ?? 0;
         q.max      = v.max ?? 10;
         q.labelMin = v.labelMin;
         q.labelMax = v.labelMax;
       }
-      if (v.type === 'checkbox') {
-        q.options = v.optionsText.split('\n').map((s) => s.trim()).filter(Boolean);
+      if (v.type === 'checkbox' || v.type === 'slider') {
+        q.options = v.options
+          .map((o) => ({ id: o.id, text: o.text.trim() }))
+          .filter((o) => o.text);
       }
+      if (v.displayVariant) q.displayVariant = v.displayVariant;
+      if (v.sourceTemplateId) q.sourceTemplateId = v.sourceTemplateId;
       return q;
     });
-    return { name, startDate, endDate, variableQuestions };
+
+    return { name, startDate, endDate, questions };
   }
 }

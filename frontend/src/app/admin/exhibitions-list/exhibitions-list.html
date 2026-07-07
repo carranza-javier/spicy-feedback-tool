@@ -1,7 +1,12 @@
 <div class="page page--wide al">
   <header class="al__header">
     <h1 class="al__title">Ausstellungen</h1>
-    <button class="btn-new" type="button" (click)="newExhibition()">+ Neu</button>
+    <div class="al__header-actions">
+      <button class="btn-back" type="button" (click)="router.navigate(['/admin/question-templates'])">
+        Vorlagen verwalten
+      </button>
+      <button class="btn-new" type="button" (click)="newExhibition()">+ Neu</button>
+    </div>
   </header>
 
   @if (loading()) {

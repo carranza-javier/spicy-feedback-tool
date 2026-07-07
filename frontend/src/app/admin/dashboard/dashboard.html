@@ -41,9 +41,9 @@
         <section class="db__section">
           <h2 class="db__section-title">{{ page.title }}</h2>
 
-          @for (entry of page.questions; track entry.question.key) {
+          @for (entry of page.questions; track entry.question.id) {
             <div class="db__q">
-              <h3 class="db__q-label">{{ entry.question.label }}</h3>
+              <h3 class="db__q-label">{{ entry.question.text }}</h3>
 
               @switch (entry.entryType) {
 

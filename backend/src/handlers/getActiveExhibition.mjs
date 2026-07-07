@@ -1,8 +1,8 @@
 // GET /exhibitions/active
 //
 // Active state is derived from dates at request time — never stored as a flag.
-// Returns 200 in all three cases with a `status` discriminator so the frontend
-// can show the right screen without treating 4xx as a normal flow.
+// Returns 200 in all cases with a `status` discriminator so the frontend can
+// show the right screen without treating 4xx as a normal flow.
 
 import { ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamo } from '../lib/dynamoClient.mjs';
@@ -27,16 +27,31 @@ export const handler = async () => {
     new ScanCommand({ TableName: EXHIBITIONS_TABLE })
   );
 
-  // ── Case 1: active exhibition ──────────────────────────────────────────────
+  // ── Case 1: one or more active exhibitions ─────────────────────────────────
   // startDate <= today <= endDate  (ISO string lex comparison)
-  const active = exhibitions.find(
+  const active = exhibitions.filter(
     (ex) => ex.startDate <= today && today <= ex.endDate
   );
 
-  if (active) {
+  if (active.length === 1) {
     return json(200, {
       status: 'active',
-      exhibition: active, // includes variableQuestions the frontend renders
+      exhibition: active[0], // includes questions the frontend renders
+    });
+  }
+
+  if (active.length > 1) {
+    // Overlapping date ranges — let the frontend show a picker screen.
+    // Lightweight list only; the frontend fetches the full exhibition
+    // (including questions) once the visitor picks one.
+    return json(200, {
+      status: 'multiple',
+      exhibitions: active.map((ex) => ({
+        exhibitionId: ex.exhibitionId,
+        name: ex.name,
+        startDate: ex.startDate,
+        endDate: ex.endDate,
+      })),
     });
   }
 

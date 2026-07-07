@@ -1,0 +1,19 @@
+<div class="page page--wide ep">
+  <h1 class="ep__title">spicy Kunstraum</h1>
+
+  @if (loading()) {
+    <p class="state-msg">Laden…</p>
+  } @else if (exhibitions().length === 0) {
+    <p class="ep__message">Derzeit ist keine Ausstellung aktiv.<br>Schau bald wieder vorbei!</p>
+  } @else {
+    <p class="ep__message">Für welche Ausstellung möchtest du Feedback geben?</p>
+    <div class="ep__list">
+      @for (ex of exhibitions(); track ex.exhibitionId) {
+        <button class="ep__card" type="button" (click)="choose(ex.exhibitionId)">
+          <span class="ep__name">{{ ex.name }}</span>
+          <span class="ep__dates">{{ formatRange(ex) }}</span>
+        </button>
+      }
+    </div>
+  }
+</div>

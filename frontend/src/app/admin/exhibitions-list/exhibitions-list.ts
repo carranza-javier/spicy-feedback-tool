@@ -11,8 +11,9 @@ type ExhibitionStatus = 'active' | 'upcoming' | 'finished';
   styleUrl: './exhibitions-list.scss',
 })
 export class ExhibitionsList implements OnInit {
-  private readonly api    = inject(Api);
-  private readonly router = inject(Router);
+  private readonly api = inject(Api);
+  // router is used directly in the template (nav buttons) so not marked private.
+  readonly router = inject(Router);
 
   readonly exhibitions = signal<AdminExhibition[]>([]);
   readonly loading     = signal(true);

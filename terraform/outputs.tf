@@ -17,3 +17,8 @@ output "admins_table_name" {
   description = "DynamoDB Admins table name"
   value       = aws_dynamodb_table.admins.name
 }
+
+output "question_templates_table_name" {
+  description = "DynamoDB QuestionTemplates table name"
+  value       = aws_dynamodb_table.question_templates.name
+}

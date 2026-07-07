@@ -20,50 +20,50 @@
       }
     </header>
 
-    @for (q of pageQuestions(); track q.key) {
+    @for (q of pageQuestions(); track q.id) {
       @switch (q.type) {
         @case ('scale') {
-          @if (q.key === 'chiliRating') {
+          @if (q.displayVariant === 'chili') {
             <app-chili-question
-              [label]="q.label"
+              [label]="q.text"
               [min]="q.min ?? 1"
-              [max]="q.max ?? 5"
-              [value]="getScaleAnswer(q.key)"
-              (valueChange)="setAnswer(q.key, $event)"
+              [max]="q.max ?? 6"
+              [value]="getScaleAnswer(q.id)"
+              (valueChange)="setAnswer(q.id, $event)"
             />
           } @else {
             <app-scale-question
-              [label]="q.label"
-              [min]="q.min ?? 0"
-              [max]="q.max ?? 10"
+              [label]="q.text"
+              [min]="q.min ?? 1"
+              [max]="q.max ?? 6"
               [labelMin]="q.labelMin ?? ''"
               [labelMax]="q.labelMax ?? ''"
-              [value]="getScaleAnswer(q.key)"
-              (valueChange)="setAnswer(q.key, $event)"
+              [value]="getScaleAnswer(q.id)"
+              (valueChange)="setAnswer(q.id, $event)"
             />
           }
         }
         @case ('slider') {
           <app-distance-slider
-            [label]="q.label"
+            [label]="q.text"
             [options]="q.options ?? []"
-            [value]="getSliderAnswer(q.key)"
-            (valueChange)="setAnswer(q.key, $event)"
+            [value]="getSliderAnswer(q.id)"
+            (valueChange)="setAnswer(q.id, $event)"
           />
         }
         @case ('checkbox') {
           <app-checkbox-question
-            [label]="q.label"
+            [label]="q.text"
             [options]="q.options ?? []"
-            [selected]="getCheckboxAnswer(q.key)"
-            (selectedChange)="setAnswer(q.key, $event)"
+            [selected]="getCheckboxAnswer(q.id)"
+            (selectedChange)="setAnswer(q.id, $event)"
           />
         }
         @case ('text') {
           <app-text-question
-            [label]="q.label"
-            [value]="getTextAnswer(q.key)"
-            (valueChange)="setAnswer(q.key, $event)"
+            [label]="q.text"
+            [value]="getTextAnswer(q.id)"
+            (valueChange)="setAnswer(q.id, $event)"
           />
         }
       }
@@ -77,7 +77,7 @@
       @if (currentPage() > 1) {
         <button class="btn-secondary" type="button" (click)="back()">Zurück</button>
       }
-      @if (currentPage() < 4) {
+      @if (currentPage() < totalPages()) {
         <button class="btn-primary" type="button" (click)="next()">Weiter</button>
       } @else {
         <button

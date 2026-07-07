@@ -1,0 +1,67 @@
+:host { display: block; }
+
+.ep {
+  &__title {
+    font-family: var(--font-brand);
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  &__message {
+    font-size: 1.05rem;
+    line-height: 1.7;
+    text-align: center;
+    margin-bottom: 1.5rem;
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  &__card {
+    width: 100%;
+    padding: 1rem 1.25rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    transition: background 0.15s ease, border-color 0.15s ease;
+
+    @media (hover: hover) {
+      &:hover {
+        background: var(--color-hover-bg);
+        border-color: var(--color-hover-border);
+      }
+    }
+
+    &:active {
+      background: var(--color-hover-bg);
+      border-color: var(--color-hover-border);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-text);
+      outline-offset: 2px;
+    }
+  }
+
+  &__name {
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  &__dates {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+  }
+}

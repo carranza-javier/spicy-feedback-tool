@@ -10,6 +10,12 @@
     margin-bottom: 1.5rem;
   }
 
+  &__header-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
   &__title {
     font-family: var(--font-brand);
     font-size: 1.5rem;
@@ -114,6 +120,18 @@
 }
 
 // ── Buttons ────────────────────────────────────────────────────────────────────
+.btn-back {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover { color: var(--color-text); }
+}
+
 .btn-new {
   padding: 0.5rem 0.875rem;
   background: var(--color-text);

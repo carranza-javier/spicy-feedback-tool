@@ -40,7 +40,7 @@ export const handler = async (event) => {
     return json(400, { error: err.message });
   }
 
-  const { exhibitionId, fixedAnswers, variableAnswers } = validated;
+  const { exhibitionId, answers } = validated;
   const today = todayUTC();
 
   // ── Confirm the exhibition exists and is currently active ──────────────────
@@ -72,8 +72,7 @@ export const handler = async (event) => {
       Item: {
         exhibitionId, // PK
         responseId,   // SK — timestamp-prefixed for natural sort order
-        fixedAnswers,
-        variableAnswers,
+        answers,
         submittedAt,
       },
     })

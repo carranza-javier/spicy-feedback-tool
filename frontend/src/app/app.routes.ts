@@ -7,6 +7,15 @@ export const routes: Routes = [
     loadComponent: () => import('./public/survey/survey').then((m) => m.Survey),
   },
   {
+    path: 'survey/:exhibitionId',
+    loadComponent: () => import('./public/survey/survey').then((m) => m.Survey),
+  },
+  {
+    path: 'pick',
+    loadComponent: () =>
+      import('./public/exhibition-picker/exhibition-picker').then((m) => m.ExhibitionPicker),
+  },
+  {
     path: 'thank-you',
     loadComponent: () => import('./public/thank-you/thank-you').then((m) => m.ThankYou),
   },
