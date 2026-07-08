@@ -20,12 +20,12 @@
 
   &__title {
     font-family: var(--font-brand);
-    font-size: 1.35rem;
+    font-size: 1.6rem;
     margin-bottom: 0.15rem;
   }
 
   &__subtitle {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     color: var(--color-text-muted);
   }
 
@@ -48,18 +48,18 @@
 
   &__total-num {
     font-family: var(--font-brand);
-    font-size: 2.5rem;
+    font-size: 2.9rem;
     font-weight: 700;
     line-height: 1;
   }
 
   &__total-label {
-    font-size: 1rem;
+    font-size: 1.15rem;
     color: var(--color-text-muted);
   }
 
   &__empty {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     color: var(--color-text-muted);
     line-height: 1.6;
   }
@@ -71,7 +71,7 @@
 
   &__section-title {
     font-family: var(--font-brand);
-    font-size: 1.1rem;
+    font-size: 1.3rem;
     font-weight: 700;
     margin-bottom: 1.25rem;
     padding-bottom: 0.4rem;
@@ -84,7 +84,7 @@
   }
 
   &__q-label {
-    font-size: 0.875rem;
+    font-size: 1.05rem;
     font-weight: 600;
     margin-bottom: 0.5rem;
     line-height: 1.4;
@@ -100,7 +100,7 @@
 
   &__avg {
     font-family: var(--font-brand);
-    font-size: 1.5rem;
+    font-size: 1.75rem;
     font-weight: 700;
     line-height: 1;
     // Matches the highlighted (average) bar in the chart below — a direct,
@@ -109,14 +109,14 @@
   }
 
   &__answered {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     color: var(--color-text-muted);
     margin-bottom: 0.5rem;
   }
 
   // ── Text answer list ───────────────────────────────────────────────────────
   &__no-text {
-    font-size: 0.875rem;
+    font-size: 1.05rem;
     color: var(--color-text-muted);
     font-style: italic;
   }
@@ -132,7 +132,7 @@
   }
 
   &__text-item {
-    font-size: 0.875rem;
+    font-size: 1.05rem;
     line-height: 1.5;
     padding: 0.5rem 0.75rem;
     border-left: 2px solid var(--color-border);
@@ -160,7 +160,7 @@
 // ── Buttons ────────────────────────────────────────────────────────────────────
 .btn-back {
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: 1.05rem;
   color: var(--color-text-muted);
   background: none;
   border: none;
@@ -173,7 +173,7 @@
 .btn-csv {
   flex-shrink: 0;
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: 1.05rem;
   font-weight: 600;
   padding: 0.375rem 0.875rem;
   background: var(--color-text);

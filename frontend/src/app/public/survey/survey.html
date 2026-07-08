@@ -14,10 +14,10 @@
     </div>
   } @else {
     <header class="survey-header">
-      <h2 class="section-title">{{ pageTitle() }}</h2>
       @if (currentPage() === 1 && exhibition()?.name) {
-        <p class="exhibition-name">{{ exhibition()!.name }}</p>
+        <p class="exhibition-badge">{{ exhibition()!.name }}</p>
       }
+      <h2 class="section-title">{{ pageTitle() }}</h2>
     </header>
 
     @for (q of pageQuestions(); track q.id) {

@@ -4,7 +4,7 @@
   margin-block: 1.25rem;
 
   &__label {
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     font-weight: 500;
     margin-bottom: 0.75rem;
   }
@@ -13,7 +13,7 @@
   // user actually interacts, so an untouched slider doesn't read as answered.
   &__current {
     font-family: var(--font-brand);
-    font-size: 1.4rem;
+    font-size: 1.6rem;
     font-weight: 700;
     text-align: center;
     color: var(--color-text-muted);

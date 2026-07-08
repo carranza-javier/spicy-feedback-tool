@@ -844,6 +844,40 @@ production GitHub Pages deploy + real admin password handoff.
       to destroy`, every change a single `timeout: 3 -> 8` in-place update,
       nothing else. Applied cleanly (`Apply complete! Resources: 0 added, 12
       changed, 0 destroyed`).
+- [x] **Exhibition-name badge (page 1) + type scale bump, survey then
+      extended to the whole admin panel.** Two rounds:
+      1. **Public survey (`public/survey/`):** the exhibition name moved out
+         of a small italic `<p class="exhibition-name">` nested under the
+         page-1 header into its own element **above** `<h2 class="section-
+         title">` — new `.exhibition-badge` class, borderless/unpadded
+         (padding and border were tried first, then explicitly removed per
+         follow-up), `font-size: 1rem`, uppercase, `letter-spacing: 0.05em`,
+         colour `#e5007e` (the one intentional colour exception on the
+         otherwise black/white public survey, alongside the chili emoji).
+         "Zur Ausstellung" itself and pages 2–4 headers untouched. Separately,
+         all survey type sizes bumped ~15–20% (rem-based, no layout-logic
+         changes, mobile-first ~400px behaviour preserved): section titles
+         `1.5rem→1.75rem`, question labels across all five shared question
+         components (`scale-question`, `checkbox-question`, `text-question`,
+         `distance-slider`, `chili-question`) `0.95rem→1.1rem`, nav buttons
+         `1rem→1.15rem`, plus proportional bumps to end-labels, error/state
+         text, the distance-slider's Comfortaa readout, and the chili emoji
+         sizes. Global `html { font-size: 16px }` in `styles.scss` was left
+         alone since it's shared with the admin panel — each survey-specific
+         class was scaled individually instead.
+      2. **Admin panel, on explicit follow-up request ("same size as the
+         survey"):** the same ~15–20% bump applied to `admin/exhibitions-
+         list.scss` (page title, table body/header text, dates, status
+         badges, header/row buttons), `admin/exhibition-edit.scss` (page
+         title, section subheads, field labels, inputs/selects/textareas,
+         hints/errors, variable-question-card numbers, all buttons), and
+         `admin/dashboard.scss` (page title/subtitle, the big total-response
+         number `2.5rem→2.9rem`, section titles, question labels, average-
+         score number `1.5rem→1.75rem`, answered-count, empty/no-text states,
+         text-answer list items, back/CSV buttons). All three admin screens
+         now sit on the same type scale as the public survey.
+      `ng build --configuration production` verified clean after each round.
+      Committed and pushed to `main`.
 
 ---
 
