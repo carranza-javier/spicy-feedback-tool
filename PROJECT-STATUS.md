@@ -814,6 +814,36 @@ production GitHub Pages deploy + real admin password handoff.
       confirmed (via a repo-wide grep) it had no references left anywhere
       except this file's own historical notes above — `src/assets/` now
       holds only `fire-animation.svg`.
+- [x] **Fire burst — small follow-up sizing tweak.** `.chq__burst` shrunk
+      from 74×90px to 44×54px (same ~0.816 aspect ratio) so the chili emoji
+      stays clearly visible through the flame instead of being dominated by
+      it. A `z-index: -1` was briefly tried to push the burst behind the
+      emoji, then removed again at the next request — final state has no
+      explicit `z-index` on `.chq__burst` (relies on plain DOM order/normal
+      stacking, same as before this tweak). Committed and pushed to `main`
+      at `f2d7420` together with the Lottie-to-SVG replacement above.
+- [x] **Fixed "login fails on first attempt" — Lambda timeout too low for
+      cold starts.** Root cause confirmed via CloudWatch logs + tfstate: the
+      default AWS/Terraform Lambda timeout is 3s (`"timeout": 3` in
+      `terraform.tfstate`, never set explicitly in the `.tf` files), and
+      `login.mjs`'s cold-start path (SSM secret fetch + `bcrypt.compare` +
+      JWT signing) exceeds that on a cold container — warm invocations are
+      fine, only the first request after idle fails, matching the reported
+      symptom exactly.
+      Added `timeout = 8` to both `aws_lambda_function.handlers` (the
+      `for_each` block covering all route handlers in `main.tf`) and the
+      separately-declared `aws_lambda_function.authorizer` — the authorizer
+      also reads the SSM secret on cold start and was equally exposed, so it
+      needed the same fix even though it isn't part of the `handlers` map.
+      **Scope correction made during this fix:** `local.handlers` has grown
+      to 11 entries since the question-template redesign (the map's own
+      comment still said "eight," now corrected) — so this change touches
+      12 Lambdas total (11 handlers + authorizer), not 9/8 as originally
+      estimated when the bug was first diagnosed.
+      `terraform plan` reviewed before applying: `0 to add, 12 to change, 0
+      to destroy`, every change a single `timeout: 3 -> 8` in-place update,
+      nothing else. Applied cleanly (`Apply complete! Resources: 0 added, 12
+      changed, 0 destroyed`).
 
 ---
 

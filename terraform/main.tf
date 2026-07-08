@@ -3,7 +3,7 @@
 locals {
   project = "spicy"
 
-  # All eight route handlers. The JWT authorizer Lambda is declared separately.
+  # All route handlers. The JWT authorizer Lambda is declared separately.
   handlers = {
     get_active_exhibition = {
       handler     = "handlers/getActiveExhibition.handler"
@@ -207,6 +207,7 @@ resource "aws_lambda_function" "handlers" {
   architectures    = ["arm64"]
   filename         = data.archive_file.lambda_src.output_path
   source_code_hash = data.archive_file.lambda_src.output_base64sha256
+  timeout          = 8
 
   environment {
     variables = merge(
@@ -237,6 +238,7 @@ resource "aws_lambda_function" "authorizer" {
   architectures    = ["arm64"]
   filename         = data.archive_file.lambda_src.output_path
   source_code_hash = data.archive_file.lambda_src.output_base64sha256
+  timeout          = 8
 
   environment {
     variables = {
