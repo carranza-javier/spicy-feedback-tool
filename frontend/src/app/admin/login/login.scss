@@ -79,7 +79,17 @@
   border-radius: 4px;
   cursor: pointer;
   margin-top: 0.5rem;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, background 0.15s ease, transform 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: var(--color-btn-primary-hover);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--color-text);
+    transform: translateY(0);
+  }
 
   &:disabled {
     opacity: 0.5;

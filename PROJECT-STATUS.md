@@ -914,6 +914,106 @@ production GitHub Pages deploy + real admin password handoff.
       Ausstellung" — with real response rows in it; user chose to wipe
       rather than export first). See item 4 under "Resume here" — this
       demo data needs clearing again before Simon's real launch.
+- [x] **Question-templates admin screen brought onto the app-wide type
+      scale + standard button style.** `admin/question-templates/` was
+      missed in the earlier "type scale bump across survey and admin panel"
+      pass (`f52a840`) and still had the pre-bump sizes; also its per-card
+      "Speichern" button used the old outlined/light `.btn-row` style
+      instead of the solid black/white primary style used everywhere else.
+      Scoped entirely to `question-templates.scss` (no template/logic
+      changes). Since this screen shares identical BEM class names with
+      `exhibition-edit.scss` (`.ae__title`, `.ae__sub`, `.ae__error`,
+      `.field__label`, `.field__input`/`.field__select`, `.btn-back`,
+      `.btn-remove`, `.btn-add-q`), font sizes were mapped 1:1 from that
+      file: title 1.35rem→1.6rem, section heading 1.05rem→1.25rem, error
+      banner 0.9rem→1.05rem, field labels 0.875rem→1.05rem, inputs/selects
+      0.95rem→1.1rem, back link 0.875rem→1.05rem, remove-option button
+      0.8rem→0.95rem, add-option/step button 0.875rem→1.05rem. The intro
+      hint text and "Gespeichert." confirmation (`.qt__hint`/`.qt__saved`)
+      have no `exhibition-edit` counterpart, so both were bumped
+      0.85rem/0.8rem→0.95rem to stay proportionate with the rest.
+      `.btn-row` (the Speichern button, used only here) restyled from
+      outlined/bg-coloured to solid `background: var(--color-text)` /
+      `color: var(--color-bg)`, no border, `font-weight: 600` — same
+      solid black/white treatment as `.btn-primary` elsewhere. Kept as an
+      inline, content-width button (same pattern as `.btn-new` on the
+      exhibitions list) rather than copying `exhibition-edit`'s full-width
+      block `.btn-primary`, since it sits per-card next to the
+      "Gespeichert." confirmation text, not alone as a page-level submit.
+      `ng build --configuration production` verified clean.
+- [x] **Button hover/press feedback made clearly perceptible app-wide.**
+      Existing hover/press states (survey's Weiter/Zurück/Absenden) were
+      judged too subtle to notice; the admin panel's solid black CTA
+      buttons (Anmelden, both Speichern buttons, + Neu, CSV) had **no**
+      hover rule at all. Fixed consistently across every solid/outlined CTA
+      button in both the public survey and admin panel — deliberately
+      scoped to CTA buttons only, not the small text/outline utility
+      buttons (`.btn-back` links, `.btn-remove`, `.btn-add-q`,
+      exhibitions-list's outlined per-row `.btn-row` "Bearbeiten"), which
+      keep their existing, separate, more minimal pattern.
+      **New/changed shared vars in `styles.scss`:** `--color-btn-primary-
+      hover` bumped `#2c2c2c` → **`#404040`** (a clearly bigger jump off the
+      `#111111` base than before) and a new **`--color-btn-secondary-hover-
+      bg: #e0e0e0`** added — kept deliberately separate from the existing
+      `--color-hover-bg`/`--color-hover-border` (`#f2f2f2`/`#999999`) used
+      by the public survey's answer option boxes (scale/checkbox/chili) and
+      `exhibition-picker`, so darkening a button's hover doesn't also
+      darken unrelated answer-option hover states — those were intentionally
+      left untouched, out of scope for this button-only request.
+      **Lift + press transform**, layered on top of the colour change, on
+      every button covered below: `&:hover { transform: translateY(-1px); }`
+      / `&:active { transform: translateY(0); }` (cancels the lift, reads as
+      being pushed in) — `transform` added to each button's existing
+      `transition` list alongside the ~0.15s `ease` duration already in use
+      (unchanged), so this rides the same existing global
+      `prefers-reduced-motion` block in `styles.scss` with no new media
+      query needed.
+      **`.btn-primary` (survey Weiter/Absenden, login Anmelden,
+      exhibition-edit Speichern, question-templates Speichern, exhibitions-
+      list + Neu, dashboard CSV):** hover → `background:
+      var(--color-btn-primary-hover)` (`#404040`, was `#2c2c2c`) + lift;
+      active → back to `var(--color-text)` (`#111111`, true black,
+      unchanged) + lift cancelled.
+      **`.btn-secondary` (survey Zurück only):** hover → `background:
+      var(--color-btn-secondary-hover-bg)` (`#e0e0e0`, new — was
+      `--color-hover-bg` `#f2f2f2`) + lift; **border-color hover override
+      removed** (previously lightened the already-black border to `#999999`
+      on hover, which read as reducing contrast, not increasing it — border
+      now stays solid `var(--color-text)` black always); active → unchanged
+      `var(--color-border)` (`#cccccc`) + lift cancelled.
+      `ng build --configuration production` verified clean.
+- [x] **Spicy logo added to the thank-you screen.** New
+      `frontend/src/assets/spicy-logo.webp` (500×421 native, pure black
+      linework on transparent background — already matches the black/white
+      scheme natively, no colour/filter override needed) rendered below the
+      "Danke!" message in `public/thank-you/thank-you.html`/`.scss`.
+      Picked up automatically by the existing `src/assets` build-assets
+      glob in `angular.json` (added earlier for the fire-animation SVG) —
+      no config change needed.
+      **Placement:** appended as the last child inside `.ty`
+      (`display: flex; flex-direction: column; align-items: center`,
+      already the mechanism centering "Danke!" and the message text) —
+      centering came for free from that existing layout, no new
+      margin-auto/text-align needed. `margin-top: 2.5rem` gives it a clear
+      visual pause below the message so it reads as a closing touch, not
+      part of the message block.
+      **Responsive sizing — relative + capped, no fixed px width:**
+      `.ty__logo { width: 34%; max-width: 150px; height: auto; }`. Width is
+      a percentage of the `.page` container (not the viewport), so it
+      follows the page shell's own existing responsive behaviour
+      (`--width-form`, 700px cap) rather than needing its own breakpoints:
+      **~360px mobile** (page content ≈ 320px) → logo ≈ 109px; **desktop**
+      (page content capped at 620px, i.e. `--width-form` 700px minus
+      2×2.5rem padding) → 34% would be ≈ 211px, but the 150px `max-width`
+      caps it there instead, keeping it a modest closing touch rather than
+      competing with "Danke!" for attention on wide screens. `height: auto`
+      preserves the native ~1.19:1 aspect ratio at every width; `width`/
+      `height` attributes (500/421) on the `<img>` tag reserve that ratio
+      immediately (no layout shift) before CSS/the image itself loads.
+      `ng build --configuration production` verified clean; confirmed
+      `spicy-logo.webp` present in `dist/.../browser/assets/`.
+
+---
 
 ## In progress
 

@@ -13,7 +13,7 @@
 
   &__title {
     font-family: var(--font-brand);
-    font-size: 1.35rem;
+    font-size: 1.6rem;
   }
 
   &__state {
@@ -28,7 +28,7 @@
 
   &__sub {
     font-family: var(--font-brand);
-    font-size: 1.05rem;
+    font-size: 1.25rem;
     font-weight: 700;
     margin-bottom: 0.75rem;
   }
@@ -40,7 +40,7 @@
   }
 
   &__error {
-    font-size: 0.9rem;
+    font-size: 1.05rem;
     background: #f0f0f0;
     padding: 0.625rem 0.75rem;
     border-radius: 4px;
@@ -50,14 +50,14 @@
 
 .qt {
   &__hint {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     color: var(--color-text-muted);
     line-height: 1.5;
     margin-bottom: 1.5rem;
   }
 
   &__saved {
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     color: var(--color-text-muted);
     margin-left: 0.5rem;
   }
@@ -71,7 +71,7 @@
   margin-bottom: 0.75rem;
 
   &__label {
-    font-size: 0.875rem;
+    font-size: 1.05rem;
     font-weight: 500;
   }
 
@@ -87,7 +87,7 @@
     border: 1.5px solid var(--color-border);
     border-radius: 4px;
     font-family: var(--font-body);
-    font-size: 0.95rem;
+    font-size: 1.1rem;
     background: var(--color-bg);
     color: var(--color-text);
 
@@ -147,7 +147,7 @@
 // ── Buttons ───────────────────────────────────────────────────────────────────
 .btn-back {
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: 1.05rem;
   color: var(--color-text-muted);
   background: none;
   border: none;
@@ -159,7 +159,7 @@
 
 .btn-remove {
   font-family: var(--font-body);
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   color: var(--color-text-muted);
   background: none;
   border: 1.5px solid var(--color-border);
@@ -180,7 +180,7 @@
   border-radius: 4px;
   background: none;
   font-family: var(--font-body);
-  font-size: 0.875rem;
+  font-size: 1.05rem;
   color: var(--color-text-muted);
   cursor: pointer;
   transition: border-color 0.1s, color 0.1s;
@@ -192,16 +192,27 @@
 }
 
 .btn-row {
-  padding: 0.4rem 0.75rem;
-  border: 1.5px solid var(--color-border);
-  border-radius: 3px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  padding: 0.5rem 0.875rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--color-text);
+  color: var(--color-bg);
   font-family: var(--font-body);
-  font-size: 0.85rem;
+  font-size: 1.05rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
 
-  &:hover { border-color: var(--color-text); }
+  &:hover:not(:disabled) {
+    background: var(--color-btn-primary-hover);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    background: var(--color-text);
+    transform: translateY(0);
+  }
+
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 
   &:focus-visible {

@@ -21,7 +21,14 @@
   // public survey's option boxes/cards. Still strictly greyscale.
   --color-hover-bg:        #f2f2f2;
   --color-hover-border:    #999999;
-  --color-btn-primary-hover: #2c2c2c;
+
+  // Button hover/press — deliberately more contrasty than the option-box
+  // vars above (kept separate on purpose: darkening a button shouldn't also
+  // darken answer options). Shared by every solid black CTA button across
+  // the public survey and admin panel (Weiter/Absenden, all Speichern
+  // buttons, Anmelden, + Neu, CSV).
+  --color-btn-primary-hover:   #404040;
+  --color-btn-secondary-hover-bg: #e0e0e0;
 
   // Width system — the ONLY two container widths in the app. Every screen
   // picks exactly one; nothing defines its own ad-hoc max-width.

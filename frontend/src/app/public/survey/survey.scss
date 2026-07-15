@@ -85,7 +85,8 @@
   border-radius: 4px;
   cursor: pointer;
   text-align: center;
-  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease,
+    transform 0.15s ease;
 
   // Desktop/tablet: buttons stop stretching to fill half the (now much
   // wider) row and instead take a natural, content-sized width. `.btn-primary`
@@ -121,15 +122,18 @@
   color: var(--color-bg);
   border: none;
 
-  // Already near-black, so "darken" reads as a slight lift on hover with
-  // the press sinking back to true black — same discreet in-between feel
-  // as the option boxes, without introducing a lighter/louder hover colour.
+  // Clearly darker on hover (not just a near-black-on-near-black shift),
+  // paired with a slight lift so the feedback is felt as well as seen.
+  // Press sinks back to true black and drops the lift — reads as the
+  // button being pushed in.
   &:hover:not(:disabled) {
     background: var(--color-btn-primary-hover);
+    transform: translateY(-1px);
   }
 
   &:active:not(:disabled) {
     background: var(--color-text);
+    transform: translateY(0);
   }
 }
 
@@ -139,12 +143,13 @@
   border: 1.5px solid var(--color-text);
 
   &:hover:not(:disabled) {
-    background: var(--color-hover-bg);
-    border-color: var(--color-hover-border);
+    background: var(--color-btn-secondary-hover-bg);
+    transform: translateY(-1px);
   }
 
   &:active:not(:disabled) {
     background: var(--color-border);
+    transform: translateY(0);
   }
 }
 
