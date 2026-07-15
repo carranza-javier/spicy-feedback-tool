@@ -27,11 +27,12 @@ production GitHub Pages deploy + real admin password handoff.
 3. **End-to-end test on production URL** — QR code → survey → thank-you →
    admin login → exhibitions list → dashboard → CSV.
 4. **Create the real exhibition(s) through the admin panel** — the
-   `Exhibitions`/`Responses` tables were wiped as part of the redesign (see
-   below); there is no seeded exhibition anymore, only the 9
-   `QuestionTemplates` rows. Simon's first real exhibition should be created
-   through "+ Neu" so its question list is populated from the current
-   templates.
+   `Exhibitions`/`Responses` tables currently hold **demo data only** (see
+   `backend/scripts/seed-demo.mjs` below), not a real exhibition. Before
+   going live, re-run `node backend/scripts/seed-demo.mjs` one last time (or
+   just delete the 5 `exhibition_demo_*` items) to clear the demo state, then
+   create Simon's first real exhibition through "+ Neu" so its question list
+   is populated from the current templates.
 
 ---
 
@@ -878,8 +879,41 @@ production GitHub Pages deploy + real admin password handoff.
          now sit on the same type scale as the public survey.
       `ng build --configuration production` verified clean after each round.
       Committed and pushed to `main`.
-
----
+- [x] **Reusable demo-data seed script** —
+      `backend/scripts/seed-demo.mjs`, run against the live AWS account (only
+      environment that exists; no separate dev/staging). Always wipes
+      `Exhibitions`/`Responses` first, then rebuilds 5 exhibitions covering
+      every lifecycle state from the 9 `QuestionTemplates` rows (same
+      client-side copy shape `exhibition-edit.ts` produces) plus 2 thematic
+      freeform questions each: **Las 12 Lunas** and **Für die Katz** (closed,
+      ~75–150 days in the past, 18/16 responses), **BioInformatik 3D** and
+      **Graffiti 2030** (both active now, dates deliberately overlapping so
+      the `/pick` overlap-picker screen has something to exercise, 13/14
+      responses), **Raum des Schweigens** (starts in 14 days, fully
+      configured, 0 responses since it can't have any yet). Dates are
+      relative day-offsets from "today," not hardcoded — stays correct
+      whenever re-run.
+      **Fully deterministic, confirmed by direct comparison, not assumption**:
+      a `mulberry32` PRNG seeded per exhibition drives response generation
+      (which scale value, which checkbox options, which free-text line, and
+      the submission timestamp all derive from the same seeded stream in a
+      fixed order), so answers/timestamps are byte-identical run over run —
+      verified by scanning one exhibition's responses before and after a
+      second run and diffing order-independently (identical; only
+      DynamoDB's unordered map-attribute serialization differed, not the
+      actual data). Only `responseId`'s random-UUID suffix legitimately
+      differs between runs (uses real `crypto.randomUUID()`, not the seeded
+      RNG — harmless, it's never displayed).
+      Text answers are hand-written German, thematically matched per
+      exhibition; some responses skip a question (probability per type) so
+      the dashboard's answered-count/blank handling has real variance to
+      show, not 100%-complete data.
+      **Ran directly against the live AWS tables** (confirmed with the user
+      first, since this is the only environment and it had two prior
+      test/dev exhibitions — "GO ANYWHERE - DO ANYTHING" and "Graffiti
+      Ausstellung" — with real response rows in it; user chose to wipe
+      rather than export first). See item 4 under "Resume here" — this
+      demo data needs clearing again before Simon's real launch.
 
 ## In progress
 
