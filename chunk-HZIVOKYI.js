@@ -1,0 +1,1 @@
+import{a as o}from"./chunk-QDNOIIDK.js";function s(i){return o.map(e=>({title:e.title,questions:i.filter(t=>t.section===e.key).sort((t,r)=>t.order-r.order)})).filter(e=>e.questions.length>0)}export{s as a};
