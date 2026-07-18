@@ -1366,6 +1366,35 @@ production GitHub Pages deploy + real admin password handoff.
       Applied; confirmed directly against the live API Gateway
       (`aws apigatewayv2 get-api`) that `AllowOrigins` now lists all three
       origins.
+- [x] **Clean `/admin` entry URL for Simon.** New static file
+      `frontend/public/admin/index.html` — a plain HTML page (not part of
+      the Angular app/router) with an instant `location.replace('/#/admin/
+      login')` plus a `<meta http-equiv="refresh">` fallback. `public/`
+      builds to the site root (same mechanism as the favicon set), so this
+      lands at `dist/.../browser/admin/index.html` and, once deployed,
+      GitHub Pages serves it directly for `feedback.spicy-kunstraum.ch/admin`
+      — no change to the app's hash routing anywhere else.
+      **Verified before deploying, against the actual static-hosting
+      behaviour, not the dev server**: `ng serve`'s dev server has its own
+      SPA-fallback middleware that intercepts `/admin` and serves the app
+      shell instead of the static file — not representative of GitHub
+      Pages. Served the real `dist/.../browser` output with a plain static
+      file server (`http-server`) instead: confirmed `/admin` → 302 → `
+      /admin/` → 200 with the redirect page's HTML, then drove it with a
+      headless browser and confirmed it lands on `.../#/admin/login` with
+      the real login form rendered.
+      **Redeployed `gh-pages`**: this time by checking out the *existing*
+      branch in a worktree (not a fresh orphan — that was only for the very
+      first deploy) and doing a clean `git rm -r .` + re-copy of the fresh
+      `dist/.../browser` output + regenerated `CNAME`/`.nojekyll`, so stale
+      content-hashed chunk filenames from the previous build don't
+      accumulate. Only `admin/index.html` actually differed from the prior
+      deploy — every other file rebuilt byte-identical, confirmed via `git
+      status` showing just the one new file staged.
+      **Share this URL with Simon**: `https://feedback.spicy-kunstraum.ch/admin`
+      (or the bare `http://` form until GitHub Pages' HTTPS enforcement is
+      confirmed — see the CORS entry above) — redirects instantly to the
+      admin login screen.
 
 ---
 
