@@ -280,7 +280,16 @@ resource "aws_apigatewayv2_api" "main" {
   description   = "spicy Kunstraum Feedback Tool API"
 
   cors_configuration {
-    allow_origins = [var.frontend_origin, "http://localhost:4200"]
+    # TODO: remove the plain-http origin once GitHub Pages' "Enforce HTTPS"
+    # is confirmed active for feedback.spicy-kunstraum.ch — it's only here
+    # because Pages can serve the custom domain over http:// for a while
+    # after the custom domain is first configured, before the TLS cert is
+    # provisioned.
+    allow_origins = [
+      var.frontend_origin,
+      "http://feedback.spicy-kunstraum.ch",
+      "http://localhost:4200",
+    ]
     allow_methods = ["GET", "POST", "PUT", "OPTIONS"]
     allow_headers = ["Content-Type", "Authorization"]
     max_age       = 300

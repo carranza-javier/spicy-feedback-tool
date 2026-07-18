@@ -1336,12 +1336,46 @@ production GitHub Pages deploy + real admin password handoff.
       a stale cached default, is what the browser tab picks up.
       `ng build --configuration production` verified clean; dist output
       confirmed to contain all 7 files at its root alongside `index.html`.
+- [x] **First production deploy to GitHub Pages.** Committed/pushed the
+      batch of finished work sitting on `main` (dashboard redesign, favicon
+      set, thank-you animation — commit `54ea323`), built
+      `ng build --configuration production`, and pushed the
+      `dist/spicy-feedback/browser/` output to a new orphan `gh-pages`
+      branch (via a temporary `git worktree --orphan`, so the `main`
+      checkout was never disturbed) with a `CNAME` file
+      (`feedback.spicy-kunstraum.ch`) and a `.nojekyll` file added at the
+      branch root. Confirmed the CORS config already live on the API
+      Gateway matched `variables.tf`/`main.tf` exactly
+      (`terraform plan` → "No changes") before this deploy, so no infra
+      change was needed at that point.
+- [x] **CORS fix — added the plain-`http://` production origin.** The
+      browser console showed a live CORS block right after the deploy
+      above: `Access-Control-Allow-Origin` missing for requests from
+      `http://feedback.spicy-kunstraum.ch` (note: **http, not https** —
+      GitHub Pages was still provisioning the TLS cert for the custom
+      domain at that point, so the site was being served over plain http).
+      `main.tf`'s `cors_configuration.allow_origins` only listed
+      `var.frontend_origin` (`https://feedback.spicy-kunstraum.ch`) +
+      `http://localhost:4200` — the `http://` production origin was
+      genuinely missing, not a propagation-delay red herring. Added
+      `"http://feedback.spicy-kunstraum.ch"` alongside the existing two,
+      with a `TODO` comment to remove it once GitHub Pages' "Enforce HTTPS"
+      is confirmed active. `terraform plan` reviewed before applying: `0 to
+      add, 1 to change, 0 to destroy` (a single in-place update to
+      `aws_apigatewayv2_api.main`'s `cors_configuration.allow_origins`).
+      Applied; confirmed directly against the live API Gateway
+      (`aws apigatewayv2 get-api`) that `AllowOrigins` now lists all three
+      origins.
 
 ---
 
 ## In progress
 
-- [ ] **GitHub Pages deploy** — push dist to gh-pages branch, configure CNAME.
+- [ ] **Confirm GitHub Pages "Enforce HTTPS" is active for
+      feedback.spicy-kunstraum.ch, then remove the temporary
+      `http://feedback.spicy-kunstraum.ch` CORS origin** added above
+      (`main.tf`, has a `TODO` marking it) — it only exists to cover the
+      window before the custom domain's TLS cert finished provisioning.
 - [ ] **Real admin password** — Simon replaces test1234 hash in Admins table at handoff.
 
 ---
