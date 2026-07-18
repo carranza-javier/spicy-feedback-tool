@@ -124,10 +124,17 @@ button {
 // Applies globally so every hover/press transition added across the survey's
 // components collapses to an instant state change for users who asked for it,
 // without needing a duplicate media query in each component's stylesheet.
+// `animation-delay`/`transition-delay` are zeroed too — without this, an
+// element with a deliberate entrance delay (e.g. the thank-you logo's 2s
+// `animation-delay` + `animation-fill-mode: backwards`) would still sit
+// invisible for the full delay under reduced motion before snapping
+// visible, instead of being visible instantly as intended.
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
     animation-duration: 0.01ms !important;
+    animation-delay: 0s !important;
     animation-iteration-count: 1 !important;
   }
 }

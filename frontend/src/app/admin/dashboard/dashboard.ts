@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -28,14 +28,76 @@ interface PageResult {
 }
 
 // ── Palette ──────────────────────────────────────────────────────────────────
-// Admin-only — the public survey stays strictly black/white. One calm, soft-
-// blue family runs across every chart on the dashboard (scale distributions
-// and multi-select bars alike), so nothing competes with anything else; the
-// warm orange accent is reserved exclusively for the average-highlight on
-// scale charts, so it stays meaningful instead of becoming "another color."
-const SCALE_BASE     = '#5598e7'; // soft blue (sequential step 350) — every distribution bar
-const SCALE_AVERAGE  = '#eb6834'; // warm orange — the ONLY accent; the bucket nearest the average
-const CHECKBOX_BASE  = '#6da7ec'; // soft blue (sequential step 300) — one tone, every multi-select chart
+// Admin-only — the public survey stays strictly black/white. Two sequential
+// ramps + one accent, assigned by the JOB the question's data does:
+//   Ocean  (blue → teal, light → dark)   — scale + slider distributions:
+//     each BAR is shaded by its own bin POSITION (lightest at the low end,
+//     deepest at the high end) — bin order is the meaning, so position is
+//     what the ramp encodes.
+//   Orchid (soft lilac → muted purple)   — checkbox multi-select: each BAR
+//     is shaded by its own RESPONSE COUNT relative to that question's
+//     min/max count (fewest = lightest lilac, most = deepest purple), not by
+//     option position. This is a deliberate redundancy with bar length —
+//     colour answers "which options are winning" at a glance, which reads
+//     faster than comparing bar lengths one by one. Two options tied on
+//     count render in the identical tone, reinforcing "equally popular"
+//     instead of implying a false ranking between them. (Previously this
+//     used one fixed tone per OPTION position instead — reverted per user
+//     feedback: within one question, seeing the "winners" via colour was
+//     judged more useful than a stable per-option identity, even though the
+//     colour is now redundant with bar length.) Kept deliberately SOFT/
+//     pastel rather than saturated — an internal admin screen still reads
+//     better calm than loud.
+//   Coral  (single accent)               — reserved exclusively for
+//     flagging the average on scale charts (the bucket nearest the average
+//     gets this colour instead of its ramp position, plus the Ø number),
+//     never reused elsewhere, so it stays meaningful.
+//
+// Scale/slider stay BARS, not a connected line/area — the buckets are
+// independent counts ("how many people picked X"), and a line between them
+// would visually imply a trend or continuity that isn't there (worst for the
+// distance slider, whose "values" are unrelated distance bands, not points
+// on a continuum).
+const OCEAN_LIGHT  = '#cfe1f5';
+const OCEAN_MID    = '#5c93c9';
+const OCEAN_DEEP   = '#0e8f6f';
+const ORCHID_LIGHT = '#e7d3ee'; // soft pale lilac — fewest responses
+const ORCHID_MID   = '#cda1d9';
+const ORCHID_DEEP  = '#8f69ab'; // muted purple, not vivid — most responses
+const CORAL        = '#e2543f'; // keep in sync with dashboard.scss's --db-coral
+
+// ── Colour helpers ─────────────────────────────────────────────────────────────
+
+function hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+
+function mixHex(a: string, b: string, t: number): string {
+  const [r1, g1, b1] = hexToRgb(a);
+  const [r2, g2, b2] = hexToRgb(b);
+  const mix = (x: number, y: number) => Math.round(x + (y - x) * t);
+  return '#' + [mix(r1, r2), mix(g1, g2), mix(b1, b2)]
+    .map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
+// One hue family, light → dark, as a function of `t` in [0, 1]. Shared
+// factory for both sequential ramps below — only the anchor colours differ.
+function makeRamp(light: string, mid: string, deep: string) {
+  return (t: number): string => {
+    const clamped = Math.max(0, Math.min(1, t));
+    return clamped <= 0.5
+      ? mixHex(light, mid, clamped / 0.5)
+      : mixHex(mid, deep, (clamped - 0.5) / 0.5);
+  };
+}
+
+// Scale/slider: `t` = bin index / (stepCount - 1) — position in the ordered
+// range is the meaning.
+const rampColor = makeRamp(OCEAN_LIGHT, OCEAN_MID, OCEAN_DEEP);
+// Checkbox: `t` = this option's count, normalised against the question's own
+// min/max count — magnitude is the meaning here, not position.
+const orchidRampColor = makeRamp(ORCHID_LIGHT, ORCHID_MID, ORCHID_DEEP);
 
 // ── Chart option factories ─────────────────────────────────────────────────────
 
@@ -50,7 +112,7 @@ function scaleChartOptions(): ChartOptions<'bar'> {
     scales: {
       x: {
         grid: { display: false },
-        ticks: { font: { family: 'Work Sans, sans-serif', size: 11 } },
+        ticks: { font: { family: 'Work Sans, sans-serif', size: 13 } },
       },
       y: {
         beginAtZero: true,
@@ -58,7 +120,7 @@ function scaleChartOptions(): ChartOptions<'bar'> {
         ticks: {
           stepSize: 1,
           precision: 0,
-          font: { family: 'Work Sans, sans-serif', size: 11 },
+          font: { family: 'Work Sans, sans-serif', size: 13 },
         },
       },
     },
@@ -89,12 +151,12 @@ function checkboxChartOptions(answeredCount: number): ChartOptions<'bar'> {
         ticks: {
           stepSize: 1,
           precision: 0,
-          font: { family: 'Work Sans, sans-serif', size: 11 },
+          font: { family: 'Work Sans, sans-serif', size: 13 },
         },
       },
       y: {
         grid: { display: false },
-        ticks: { font: { family: 'Work Sans, sans-serif', size: 12 } },
+        ticks: { font: { family: 'Work Sans, sans-serif', size: 13 } },
       },
     },
   };
@@ -121,13 +183,15 @@ function aggregateQuestion(q: Question, rawValues: unknown[]): QuestionEntry {
 
     const average = answeredCount > 0 ? Math.round((sum / answeredCount) * 10) / 10 : 0;
 
-    // Emphasis: every bucket is the calm base hue except the one nearest the
-    // average, which carries the warm accent — the visual answer to "where's
-    // the average" instead of just the number above the chart.
+    // Emphasis: every bucket takes its own Ocean-ramp position (light at the
+    // low end, deep teal at the high end) except the one nearest the
+    // average, which carries the Coral accent — the visual answer to
+    // "where's the average" instead of just the number above the chart.
     const averageIndex = answeredCount > 0
       ? Math.min(steps.length - 1, Math.max(0, Math.round(average) - min))
       : -1;
-    const backgroundColor = steps.map((_, i) => (i === averageIndex ? SCALE_AVERAGE : SCALE_BASE));
+    const rampSpan = Math.max(1, steps.length - 1);
+    const backgroundColor = steps.map((_, i) => (i === averageIndex ? CORAL : rampColor(i / rampSpan)));
 
     const chartData: ChartData<'bar'> = {
       labels: steps.map(String),
@@ -159,15 +223,27 @@ function aggregateQuestion(q: Question, rawValues: unknown[]): QuestionEntry {
     }
 
     // Multi-select — honest as a horizontal bar (percentages don't sum to
-    // 100%, so a pie/donut here would misleadingly imply they do). One
-    // shared soft tone across every multi-select question — no legend box
-    // needed, the question label is the title, and the accent stays
-    // reserved for the scale charts' average.
+    // 100%, so a pie/donut here would misleadingly imply that they do).
+    // Coloured by each option's own RESPONSE COUNT, normalised against this
+    // question's min/max count (fewest → lightest lilac, most → deepest
+    // purple) — same ramp technique as the Ocean scale/slider bars, just
+    // keyed by count instead of position. Two options tied on count get the
+    // identical tone; if every option is tied (including all-zero), there's
+    // no spread to encode, so all render at the ramp's midpoint rather than
+    // defaulting to either end.
+    const counted = options.map((o) => counts.get(o.id) ?? 0);
+    const countMin = counted.length ? Math.min(...counted) : 0;
+    const countMax = counted.length ? Math.max(...counted) : 0;
+    const countSpan = countMax - countMin;
+    const backgroundColor = counted.map((c) =>
+      orchidRampColor(countSpan > 0 ? (c - countMin) / countSpan : 0.5)
+    );
+
     const chartData: ChartData<'bar'> = {
       labels: options.map((o) => o.text),
       datasets: [{
-        data: options.map((o) => counts.get(o.id) ?? 0),
-        backgroundColor: CHECKBOX_BASE,
+        data: counted,
+        backgroundColor,
         borderRadius: 4,
         maxBarThickness: 22,
       }],
@@ -180,8 +256,8 @@ function aggregateQuestion(q: Question, rawValues: unknown[]): QuestionEntry {
     // counted against the question's own stops in their natural (non-
     // alphabetical, non-numeric) order, e.g. distanceTravelled's
     // "20m" → "200km". No average: averaging category labels is meaningless,
-    // unlike a real numeric scale. Same id-based counting as checkbox, for
-    // the same reason.
+    // unlike a real numeric scale. Same ordered-single-series shape as
+    // scale, so it shares the Ocean ramp, one bar per stop, light→dark.
     const options = q.options ?? [];
     const counts  = new Map<string, number>(options.map((o) => [o.id, 0]));
     let answeredCount = 0;
@@ -193,11 +269,12 @@ function aggregateQuestion(q: Question, rawValues: unknown[]): QuestionEntry {
       }
     }
 
+    const rampSpan = Math.max(1, options.length - 1);
     const chartData: ChartData<'bar'> = {
       labels: options.map((o) => o.text),
       datasets: [{
         data: options.map((o) => counts.get(o.id) ?? 0),
-        backgroundColor: SCALE_BASE,
+        backgroundColor: options.map((_, i) => rampColor(i / rampSpan)),
         borderRadius: 4,
         maxBarThickness: 28,
       }],
@@ -241,6 +318,15 @@ export class Dashboard implements OnInit {
   readonly totalCount  = signal(0);
   readonly downloading = signal(false);
 
+  // Free-browsing tabs, one per section — not a sequential Weiter/Zurück
+  // flow like the survey. Total count + CSV stay outside this, in the
+  // header, since they're exhibition-wide, not per-section.
+  readonly activeTab = signal(0);
+  readonly activeSection = computed<PageResult | null>(() => {
+    const pages = this.pageResults();
+    return pages[this.activeTab()] ?? pages[0] ?? null;
+  });
+
   private exhibitionId = '';
 
   ngOnInit(): void {
@@ -274,6 +360,14 @@ export class Dashboard implements OnInit {
         this.loading.set(false);
       },
     });
+  }
+
+  selectTab(i: number): void {
+    this.activeTab.set(i);
+  }
+
+  onSectionSelect(event: Event): void {
+    this.selectTab(Number((event.target as HTMLSelectElement).value));
   }
 
   // Height in px for a horizontal bar chart with n options.

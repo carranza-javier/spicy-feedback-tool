@@ -1012,6 +1012,330 @@ production GitHub Pages deploy + real admin password handoff.
       immediately (no layout shift) before CSS/the image itself loads.
       `ng build --configuration production` verified clean; confirmed
       `spicy-logo.webp` present in `dist/.../browser/assets/`.
+- [x] **Thank-you logo entrance animation — went through several tuning
+      passes; a real root-cause bug was found and fixed, then the sequence
+      was extended to a proper two-step text-then-logo entrance.**
+      `thank-you.scss` + `styles.scss` (one shared-rule addition, see below).
+      **History up to `12s cubic-bezier(0.16, 1, 0.3, 1) 2s backwards`:**
+      started as a combined scale+opacity "emerge from depth" effect
+      (`scale(0.6)→1`, `0.7s ease-out`) — too fast/abrupt; slowed to `1.8s`
+      with a deeper start (`scale(0.3)`) and a softer
+      `cubic-bezier(0.16, 1, 0.3, 1)` curve — still too fast; duration
+      tripled to `5.4s`; mechanism changed to a pure opacity fade per
+      explicit request (scale/transform dropped, logo stays full-size); a
+      2s `animation-delay` was added and duration bumped to `6s`; still
+      judged too fast, duration doubled to `12s`.
+      **Root cause finally diagnosed, not just guessed at another number:**
+      even at `12s` it still looked like it "jumped" to mostly-visible fast.
+      Verified via the actual compiled production CSS (not just source) and
+      a numeric evaluation of the shipped `cubic-bezier(0.16, 1, 0.3, 1)`
+      curve — confirmed no leftover `transform`/scale, correct single
+      `@keyframes` (not a `transition`), `backwards` correctly holding
+      `opacity: 0` through the delay — but the curve itself pins both
+      control points' y-value at `1` with low x-values, which mathematically
+      front-loads ~90% of the opacity change into the first ~30% of
+      whatever the duration is (confirmed: at only 4s into the old 12s
+      animation, opacity was already 0.90). That's why every duration
+      increase "didn't fix" the jump — the curve's shape is
+      duration-independent, so a longer duration only ever lengthened the
+      already-imperceptible tail, never softened the front-loaded jump.
+      **Fixed by swapping the curve, not the duration:** `ease-in-out`
+      (verified numerically to sit at exactly 0.50 opacity at the 6s
+      midpoint of the 12s duration — i.e. genuinely even pacing) replaces
+      `cubic-bezier(0.16, 1, 0.3, 1)` for the logo's fade. Duration (`12s`)
+      and `backwards` fill-mode are unchanged.
+      **Extended to a real two-step sequence per follow-up request:** title
+      + message now fade in together as **step 1**
+      (`animation: ty-text-fade 1.5s ease-out backwards;` on both
+      `.ty__title` and `.ty__message`, new `@keyframes ty-text-fade`,
+      identical opacity-only shape to the logo's), then the logo fades in
+      as **step 2** — its `animation-delay` changed from the old fixed `2s`
+      to `1.5s`, deliberately matching the text fade's own duration exactly
+      so the logo starts the instant the text finishes, not racing it in
+      parallel and not leaving an arbitrary gap.
+      **Final values:** `.ty__title`/`.ty__message`:
+      `animation: ty-text-fade 1.5s ease-out backwards;`. `.ty__logo`:
+      `animation: ty-logo-emerge 12s ease-in-out 1.5s backwards;`.
+      `animation-fill-mode: backwards` is used on all three for the same
+      reason established earlier in this file — holds each element's
+      `opacity: 0` starting keyframe through its delay window (zero delay
+      for the text, 1.5s for the logo) instead of flashing visible first.
+      **`prefers-reduced-motion` needed one small addition to the existing
+      global rule** in `styles.scss` — it previously zeroed
+      `transition-duration`/`animation-duration`/`animation-iteration-count`
+      but not `animation-delay`/`transition-delay`; without also zeroing
+      those, a reduced-motion user would still sit through the full delay
+      window (held by `backwards`) before the near-instant collapsed
+      animation played. Added `transition-delay: 0s !important;
+      animation-delay: 0s !important;` alongside the existing declarations
+      in the same `@media (prefers-reduced-motion: reduce)` block — this
+      one shared rule automatically covers all three animations (text ×2,
+      logo) with no per-element media queries needed, and collapses all of
+      them to instant/fully-visible with no perceptible delay or fade.
+      Verified via the actual compiled production CSS
+      (`dist/.../chunk-*.js`) that both keyframes and all three animation
+      declarations shipped correctly.
+      `ng build --configuration production` verified clean.
+- [x] **Dashboard redesign — tabs, three-family tonal colour system, area
+      charts, font-scale parity.** Planned with the user first (approved plan
+      before any code), driven by feedback that the old dashboard was one
+      long scroll, monotonous (one flat blue + one orange accent everywhere),
+      all-bar-charts, and had noticeably smaller text than the rest of the
+      admin panel.
+      **Tabs, not a sequential flow.** `admin/dashboard/dashboard.ts` gained
+      `activeTab`/`activeSection` (a plain signal + computed, no routing) —
+      free browsing between the 4 sections, mirroring the survey's own
+      section split but explicitly not Weiter/Zurück. `pageResults()` (still
+      built by the unchanged `groupBySection()`) now renders as a tab strip
+      (`db__tabs`/`db__tab`) plus only the active section's questions, instead
+      of all 4 stacked. Total response count and the CSV button stay in the
+      header, unaffected by tab switching (exhibition-wide, not per-section).
+      Removed the now-redundant in-content section-title heading (the tab
+      itself already names the section).
+      **Colour, assigned by the job the data does (dataviz skill method), not
+      decoration — three tonal families, validated with the skill's
+      `validate_palette.js` six-check categorical validator (all pass, light
+      + dark surface, on representative swatches from all three families
+      together, since they can appear side by side in one tab):**
+      **Ocean** (`#cfe1f5` → `#5c93c9` → `#0e8f6f`, blue→teal) for scale +
+      slider distributions — both are genuinely ordinal (bin position IS the
+      meaning), so a new `rampColor(t)` helper interpolates light→dark across
+      however many bins the question has (works for any range, not just
+      1–6). **Orchid** (`#8a4f9c`/`#b06fbc`/`#6b3679`) for checkbox
+      multi-select — deliberately flat, not a gradient, since reordering
+      nominal options doesn't change their meaning (a gradient there would
+      falsely imply rank); cycled per-section (not global) so 2+ checkbox
+      questions in the same tab stay visually distinct from each other.
+      **Coral** (`#e2543f`) — a single reserved accent, used only to flag the
+      average on scale charts and colour-match the existing `Ø` number above
+      it (unchanged link, just re-tuned to coordinate with Ocean/Orchid
+      instead of clashing as flat orange-on-blue did before).
+      **Chart-type variety, same honesty rules as before.** Scale and slider
+      distributions moved from vertical bar to a filled **area/line** chart
+      (new `shared/area-chart/area-chart.ts`, a Chart.js `type: 'line'`
+      sibling to the existing `shared/bar-chart/bar-chart.ts`, same
+      create-in-`ngAfterViewInit`/destroy-in-`ngOnDestroy` lifecycle shape) —
+      still an honest single-series ordered distribution, just filled instead
+      of barred; `tension: 0` (straight segments only) so nothing is visually
+      invented between real, discrete bins. The area fill itself is a
+      horizontal canvas gradient built from `rampColor` samples
+      (`areaGradient()` in `dashboard.ts`), computed from the chart's own
+      `chartArea` once Chart.js has measured it. The average marker changed
+      from recolouring one bar orange to a single highlighted **point** on
+      the line (`pointRadius`/`pointBackgroundColor` arrays, Chart.js's
+      built-in per-point styling, no annotation plugin needed) — keeps the
+      ramp doing one job (bin position) and the point doing the other (flag
+      the mean) instead of overloading one colour channel with both.
+      Checkbox multi-select **stays horizontal bar** (recoloured to Orchid) —
+      explicitly the one case that does NOT get the gradient/area treatment,
+      since it's nominal data and pie/donut is still ruled out (percentages
+      don't sum to 100%), matching the honesty rule already established for
+      this question type.
+      **Font-scale parity:** most `db__*` HTML text sizes already matched
+      their `exhibition-edit` counterparts from an earlier app-wide type-scale
+      pass — the actual mismatch was Chart.js's own internal tick fonts,
+      hardcoded at `size: 11`/`size: 12`, visibly smaller than the
+      surrounding ~1.05rem HTML text. Bumped to `size: 13` in both chart
+      option factories (`lineChartOptions()`/`checkboxChartOptions()`).
+      **Verified live** against the dev server (demo data from
+      `backend/scripts/seed-demo.mjs` already had real response counts —
+      "Las 12 Lunas", 18 responses) via a scripted Playwright session
+      (`playwright` installed standalone in the scratchpad, not added to
+      `frontend/package.json`, since this was a one-off verification, not a
+      project dependency): logged in, confirmed all 4 tabs render and switch
+      correctly, total count/CSV stay visible across tab switches, scale/
+      slider render as Ocean gradient area charts with the Coral average
+      point where applicable, checkbox stays horizontal bar in Orchid with
+      distinct tones for 2+ questions in one tab, CSV export still downloads
+      correctly, zero console errors. Checked both 1280px and 375px — at
+      375px the 4-tab strip overflows to a horizontal scroll (same
+      `overflow-x: auto` pattern already used by the exhibitions-list table),
+      confirmed the last tab is genuinely reachable and clickable via scroll,
+      not just visually clipped. `ng build --configuration production`
+      verified clean.
+- [x] **Dashboard scale/slider charts reverted from area/line back to bars**
+      — the area/line treatment from the redesign above was judged confusing
+      on user feedback, not clearer: a connecting line between independent
+      response buckets ("how many people picked X") visually implies a trend
+      or continuity that isn't there. Worst for the distance slider, whose
+      "values" are unrelated distance bands (20m, 500m, 1km…), not points on
+      a continuum — a line there falsely suggested a trajectory between
+      unrelated categories. Affected all four: `emotionExhibition`,
+      `chiliRating`, `websiteEase`, `distanceTravelled`.
+      **What was kept, per explicit instruction:** the Ocean tonal ramp — now
+      applied **per bar** (each bar shaded by its own position, lightest at
+      the low end, deepest teal at the high end) instead of as an area-fill
+      gradient. The Coral average-highlight is back to being a distinctly
+      coloured **bar** at the average bucket (the original technique), not a
+      floating point on a line. Checkbox charts (Orchid, horizontal bars) and
+      all the tab/font/palette-family work from the entry above are
+      untouched.
+      **Mechanically:** `dashboard.ts`'s `scale`/`slider` branches of
+      `aggregateQuestion` rebuild `ChartData<'bar'>` with
+      `backgroundColor: steps.map((_, i) => rampColor(i / rampSpan))` (Coral
+      substituted at the average index for scale), reusing the same
+      `rampColor()` helper unchanged from the area-chart version — only the
+      *application* (per-bar vs. gradient-fill) changed, not the ramp itself.
+      `areaGradient()` and `lineChartOptions()` deleted (dead code once
+      nothing produces `ChartData<'line'>` anymore); `scaleChartOptions()`
+      restored as the one bar-options factory shared by scale + slider (still
+      with the `size: 13` tick-font fix from the original redesign). The
+      `QuestionEntry`/component accessor types collapsed back to a single
+      `ChartData<'bar'>`/`ChartOptions<'bar'>` pair (`chartData()`/
+      `chartOpts()`) instead of the separate bar/line accessor pairs, since
+      every chart on the dashboard is a bar chart again. The now-unused
+      `shared/area-chart/area-chart.ts` component (only ever consumed by
+      dashboard.ts) was deleted outright rather than left dead.
+      `dashboard.html`/`dashboard.scss`: `app-area-chart` swapped back to
+      `app-bar-chart` for the scale/slider cases; `chart-wrap--area` renamed
+      back to `chart-wrap--bar`.
+      **Verified live** against the dev server with the same demo exhibition
+      ("Las 12 Lunas") — confirmed scale bars now show individual light→dark
+      bars with the average bucket in Coral (no connecting line), and the
+      distance-slider chart shows independent bars per distance band with no
+      false continuity between them. Zero console errors.
+      `ng build --configuration production` verified clean.
+- [x] **Checkbox charts — per-OPTION colour, extended Orchid family to 8
+      tones.** Follow-up to the two entries above: checkbox multi-select
+      charts previously used one flat Orchid tone for the whole question
+      (cycled per checkbox *question*, not per option). Changed to colour
+      each **option** by its fixed position in the option list — never by its
+      response count, so colour stays a pure visual identifier, stable
+      across re-renders, with no implied ranking and no redundancy with what
+      bar length already shows.
+      **Palette extended from 3 flat tones to 8 fixed ones**, spanning
+      purple → lilac → pink (deep purple, lilac, medium purple, orchid,
+      violet magenta, light orchid, magenta pink, light pink) — sized to the
+      actual longest real question in this app ("Womit überzeugt dich der
+      Kunstraum spicy", `tpl_whatConvinces`, has exactly 8 options — checked
+      directly in `backend/scripts/seed-templates.mjs` rather than assumed),
+      so that one covers with zero repeats; shorter questions (e.g. the
+      6-option "Du bist…") just use the first N tones in the same fixed
+      order, cycling back to tone 1 only past 8 options.
+      **Order is a deliberate zigzag in lightness** (dark/light/dark/light…),
+      not a smooth monotonic gradient, even though hue still sweeps
+      purple→pink across the set — a smooth gradient would put adjacent
+      tones too close together (low OKLab ΔE) to reliably tell neighbouring
+      bars apart; alternating lightness keeps adjacent contrast high while
+      the set still *reads* as one coordinated family when viewed together.
+      **Re-validated with the dataviz skill's `validate_palette.js`**, this
+      time in **adjacent-pairs mode** (not `--pairs all`) — matching how the
+      skill itself classifies bar/list charts, where only neighbouring bars
+      are ever visually compared, which is also literally what was asked
+      ("adjacent bars… must stay distinguishable"). All 8 tones pass in this
+      fixed order (worst adjacent CVD ΔE 17.7 deutan, normal-vision floor
+      20.3), including the wrap-around pair (tone 8 → tone 1, relevant once a
+      question exceeds 8 options). Sub-3:1 contrast on the four lightest
+      tones is a documented WARN, legal here because every bar always
+      carries a visible option-text label to its left (the relief channel) —
+      never colour-alone identification.
+      `dashboard.ts`: `ORCHID_TONES` grew from 3 to 8 hexes; the checkbox
+      branch of `aggregateQuestion` now builds `backgroundColor` as
+      `options.map((_, i) => ORCHID_TONES[i % ORCHID_TONES.length])` instead
+      of a single flat tone; the per-section `checkboxToneIndex` cycling
+      counter in `buildPageResults` (needed under the old per-*question*
+      scheme) was removed as dead complexity — colour no longer depends on
+      which/how-many other checkbox questions share a tab.
+      **Verified live** against the dev server: the real 8-option question
+      ("Zu spicy" tab) shows 8 distinct tones, no repeats; the 6-option
+      question ("Zur Person" tab) uses the first 6 tones in the identical
+      order (option 1 is the same deep-purple in both charts), confirming
+      assignment is by fixed position, not per-question or per-count. Zero
+      console errors. `ng build --configuration production` verified clean.
+- [x] **Checkbox charts — reverted to colour-by-response-count, palette
+      softened to pastel.** Follow-up to the entry above: per-option fixed
+      identity colour was reverted per user feedback — seeing which options
+      are "winning" via colour, at a glance, was judged more useful here than
+      a stable per-option identity, even though it's now deliberately
+      redundant with bar length (that redundancy is the point: fast visual
+      scanning, not a new dimension of information).
+      **Mechanism**, same technique as the Ocean scale/slider ramp, just
+      keyed differently: each checkbox bar is shaded by its own response
+      count, normalised against *that question's own* min/max count (not a
+      global range, not option position) — fewest responses → lightest
+      lilac, most → deepest purple. Two options tied on count get the exact
+      same tone (ties are literal equality of the normalised `t` value, so
+      this falls out for free); if every option is tied, including the
+      degenerate all-zero case, there's no spread to encode at all, so
+      everything renders at the ramp's midpoint rather than defaulting to
+      either end.
+      **Palette softened** — the prior 8-tone set (`#8a4f9c`-family) was
+      judged too saturated. Replaced the 8 fixed hues with 3 ramp anchors,
+      reusing the exact same interpolation shape as the Ocean ramp via a new
+      shared `makeRamp(light, mid, deep)` factory (`rampColor` and the new
+      `orchidRampColor` are now both just calls to this one factory — the
+      only thing that ever differed between them was the anchor colours):
+      `#e7d3ee` (pale lilac) → `#cda1d9` → `#8f69ab` (muted purple, not
+      vivid) — confirmed via the same OKLCH probe used for earlier palette
+      tuning that lightness decreases monotonically (0.891 → 0.768 → 0.585)
+      while chroma stays soft throughout (0.04–0.11, well below the prior
+      deep tone's 0.13+), i.e. genuinely pastel, not just darker.
+      `dashboard.ts`: the checkbox branch of `aggregateQuestion` computes
+      `countMin`/`countMax`/`countSpan` from that question's own counted
+      values and maps each bar's `t` through `orchidRampColor`; the old fixed
+      `ORCHID_TONES` array and its position-based cycling are gone.
+      **Verified live** against the dev server: the 8-option question shows
+      its highest-count bar in deep purple, several visually-tied mid-count
+      bars sharing one identical tone, and its lowest bars in pale lilac; the
+      6-option question shows the same pattern (two tied bars rendering
+      pixel-identical). Zero console errors.
+      `ng build --configuration production` verified clean.
+- [x] **Dashboard tab bar — fixed a spurious desktop scrollbar, added a
+      mobile dropdown.** Two issues in the tab strip from the dashboard
+      redesign above, both scoped to `admin/dashboard/`:
+      1. **Desktop**: `.db__tabs` had `overflow-x: auto` left over from when
+         it was designed to double as the mobile solution too — on desktop
+         this created a scroll affordance even though the 4 short section
+         titles never actually need one (measured directly: `.db__tabs`
+         `scrollWidth === clientWidth` exactly, i.e. never truly
+         overflowing) inside the `--width-wide` container. Removed
+         `overflow-x`/`-webkit-overflow-scrolling` entirely — no longer
+         needed once mobile got its own dedicated control (below), so
+         `.db__tabs` is a plain flex row at desktop widths with nothing to
+         scroll.
+      2. **Mobile**: a horizontal-scroll tab strip is a bad pattern here
+         regardless of the bug above — the 4th tab was invisible with no
+         visual cue it existed. Replaced with a native `<select>` dropdown
+         (`db__tab-select`, new markup in `dashboard.html`, new
+         `onSectionSelect()` handler in `dashboard.ts` calling the existing
+         `selectTab()`) shown only below the app's one existing mobile/
+         desktop breakpoint (640px — same breakpoint already used by
+         `.chart-wrap--bar`'s height bump and the global `.page` padding
+         step, not a new one). `.db__tabs` and `.db__tab-select-wrap` are
+         simple mirror-image `display: none` / `@media (min-width: 640px)`
+         pairs — mobile-first, no JS breakpoint watching needed.
+      **Verified live**: at 1280px, `.db__tabs` computed `display: flex`,
+      `scrollWidth === clientWidth` (1020 = 1020, confirmed via direct DOM
+      measurement — no overflow), select-wrap `display: none`. At 390px,
+      `.db__tabs` `display: none`, select-wrap `display: block`, all 4
+      section titles present as `<option>`s, and exercising the dropdown
+      (`selectOption` to index 3) correctly swapped the rendered content to
+      the "Zur Homepage" section's questions. Zero console errors.
+      `ng build --configuration production` verified clean.
+- [x] **Real favicon set installed, replacing the default Angular one.**
+      The 7 generated files (`favicon.ico`, `favicon-16x16.png`,
+      `favicon-32x32.png`, `apple-touch-icon.png`,
+      `android-chrome-192x192.png`, `android-chrome-512x512.png`,
+      `site.webmanifest`) had been dropped into `src/assets/`, which builds
+      to `/assets/...` (per `angular.json`'s existing asset-glob entry) — but
+      the provided `site.webmanifest` already hardcodes its icon `src`s as
+      root-relative (`/android-chrome-*.png`), so the whole set needed to
+      live at the site root instead. Moved all 7 into `public/` (the
+      project's existing root-output folder, confirmed via `angular.json`:
+      `{ glob: "**/*", input: "public" }` has no `output` key, i.e. maps to
+      `/`), overwriting the old default Angular `favicon.ico` that lived
+      there. `index.html` gained the standard link set (`icon` ×3 for
+      `.ico`/32/16px, `apple-touch-icon`, `manifest`) alongside the existing
+      Google Fonts links; PNG dimensions double-checked by reading each
+      file's PNG `IHDR` chunk directly (not assumed from filename) —
+      confirmed 16×16/32×32/180×180/192×192/512×512 all correct.
+      **Verified live** against the dev server after a reload: all 5 link
+      tags resolve to 200 with the expected `rel`/`sizes` values, and
+      `favicon.ico` serves at exactly the new file's byte size (15406,
+      distinct from the old default's 15086) — confirming the new icon, not
+      a stale cached default, is what the browser tab picks up.
+      `ng build --configuration production` verified clean; dist output
+      confirmed to contain all 7 files at its root alongside `index.html`.
 
 ---
 

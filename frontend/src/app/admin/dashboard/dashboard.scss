@@ -64,18 +64,80 @@
     line-height: 1.6;
   }
 
-  // ── Sections (one per survey page) ────────────────────────────────────────
-  &__section {
-    margin-bottom: 2.5rem;
+  // ── Tabs — free browsing between sections, not a sequential flow ──────────
+  // Desktop (>= 640px, the app's one mobile/desktop breakpoint): a
+  // horizontal tab strip — 4 short section titles always fit comfortably
+  // inside --width-wide, so no scrolling is needed at all. Mobile: the
+  // strip is hidden entirely in favour of the `&__tab-select` dropdown
+  // below — 4 tabs don't fit in a row at readable size, and a tab hidden
+  // behind a horizontal scroll (with no visible cue it exists) is a worse
+  // pattern than a native select.
+  &__tabs {
+    display: none;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border);
+
+    @media (min-width: 640px) {
+      display: flex;
+    }
   }
 
-  &__section-title {
-    font-family: var(--font-brand);
-    font-size: 1.3rem;
-    font-weight: 700;
-    margin-bottom: 1.25rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 1px solid var(--color-border);
+  &__tab {
+    flex: 0 0 auto;
+    padding: 0.625rem 0.125rem;
+    margin-bottom: -1px;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+
+    &:hover { color: var(--color-text); }
+
+    &--active {
+      color: var(--color-text);
+      border-bottom-color: var(--color-text);
+    }
+  }
+
+  // Mobile-only section dropdown — mirror image of &__tabs above (shown by
+  // default, hidden from 640px up, where the tab strip takes over).
+  &__tab-select-wrap {
+    margin-bottom: 2rem;
+
+    @media (min-width: 640px) {
+      display: none;
+    }
+  }
+
+  &__tab-select {
+    width: 100%;
+    padding: 0.625rem 0.75rem;
+    border: 1.5px solid var(--color-border);
+    border-radius: 4px;
+    font-family: var(--font-body);
+    font-size: 1.05rem;
+    font-weight: 600;
+    background: var(--color-bg);
+    color: var(--color-text);
+    cursor: pointer;
+
+    &:focus {
+      outline: 2px solid var(--color-text);
+      outline-offset: -1px;
+      border-color: var(--color-text);
+    }
+  }
+
+  // ── Active section content ─────────────────────────────────────────────────
+  &__section {
+    margin-bottom: 2.5rem;
   }
 
   // ── Individual question block ──────────────────────────────────────────────
@@ -103,9 +165,10 @@
     font-size: 1.75rem;
     font-weight: 700;
     line-height: 1;
-    // Matches the highlighted (average) bar in the chart below — a direct,
-    // deliberate colour link, not a stray accent.
-    color: #eb6834;
+    // Matches the highlighted average-point on the chart below (the Coral
+    // accent family — dashboard.ts's CORAL constant) — a direct, deliberate
+    // colour link, not a stray accent. Keep in sync with that constant.
+    color: #e2543f;
   }
 
   &__answered {
@@ -146,8 +209,8 @@
   width: 100%;
 
   // Default: sized by explicit [style.height.px] from host (for checkbox).
-  // For scale bars a fixed compact height is fine, taller on wide admin layout
-  // since the chart also gets much wider there.
+  // For scale/slider bars a fixed compact height is fine, taller on wide
+  // admin layout since the chart also gets much wider there.
   &--bar {
     height: 180px;
 

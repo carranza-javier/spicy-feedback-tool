@@ -24,7 +24,7 @@
     <p class="db__state db__state--error">{{ error() }}</p>
   } @else {
 
-    <!-- Total counter -->
+    <!-- Total counter — exhibition-wide, stays visible across every tab -->
     <div class="db__total">
       <span class="db__total-num">{{ totalCount() }}</span>
       <span class="db__total-label">{{ totalCount() === 1 ? 'Antwort' : 'Antworten' }} gesamt</span>
@@ -37,11 +37,40 @@
       </p>
     } @else {
 
-      @for (page of pageResults(); track page.title) {
-        <section class="db__section">
-          <h2 class="db__section-title">{{ page.title }}</h2>
+      <!-- Free-browsing tabs, one per section — not a sequential flow.
+           Desktop: horizontal tab strip. Mobile (< 640px, same breakpoint
+           used elsewhere in this app): a compact dropdown instead — four
+           tabs don't fit in a row at readable size, and a hidden-until-
+           scrolled 4th tab is a worse pattern than a native select. -->
+      <nav class="db__tabs">
+        @for (page of pageResults(); track page.title; let i = $index) {
+          <button
+            type="button"
+            class="db__tab"
+            [class.db__tab--active]="i === activeTab()"
+            (click)="selectTab(i)"
+          >
+            {{ page.title }}
+          </button>
+        }
+      </nav>
 
-          @for (entry of page.questions; track entry.question.id) {
+      <div class="db__tab-select-wrap">
+        <select
+          class="db__tab-select"
+          aria-label="Abschnitt wählen"
+          [value]="activeTab()"
+          (change)="onSectionSelect($event)"
+        >
+          @for (page of pageResults(); track page.title; let i = $index) {
+            <option [value]="i">{{ page.title }}</option>
+          }
+        </select>
+      </div>
+
+      @if (activeSection(); as section) {
+        <section class="db__section">
+          @for (entry of section.questions; track entry.question.id) {
             <div class="db__q">
               <h3 class="db__q-label">{{ entry.question.text }}</h3>
 

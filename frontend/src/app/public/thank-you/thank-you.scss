@@ -8,26 +8,71 @@
   min-height: 80dvh;
   text-align: center;
 
+  // Step 1 of the entrance sequence — title + message fade in together,
+  // immediately on mount (no delay). `backwards` fill-mode guards against
+  // a one-frame flash of full opacity before the animation's first frame
+  // paints (matters even with a 0 delay).
   &__title {
     font-family: var(--font-brand);
     font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 1.5rem;
+    animation: ty-text-fade 1.5s ease-out backwards;
   }
 
   &__message {
     font-size: 1.1rem;
     line-height: 1.8;
+    animation: ty-text-fade 1.5s ease-out backwards;
   }
 
-  // Closing touch, not the focal point — sized relative to the page shell
-  // (`width: %` + `max-width` cap) rather than a fixed px value, so it
-  // scales fluidly down to ~360px mobile and stops growing past a modest
-  // cap on desktop instead of ever dominating the "Danke!" message above it.
+  // Step 2 — closing touch, not the focal point — sized relative to the
+  // page shell (`width: %` + `max-width` cap) rather than a fixed px
+  // value, so it scales fluidly down to ~360px mobile and stops growing
+  // past a modest cap on desktop instead of ever dominating the "Danke!"
+  // message above it.
   &__logo {
     width: 34%;
     max-width: 150px;
     height: auto;
     margin-top: 2.5rem;
+
+    // One-shot fade-in entrance — opacity only, no scale/transform, logo
+    // stays at its normal full size throughout.
+    // `animation-delay: 1.5s` matches the text fade's own duration exactly,
+    // so the logo starts the instant the text finishes — a genuine two-step
+    // sequence (text, then logo), not two animations racing in parallel.
+    // `ease-in-out` (not the earlier `cubic-bezier(0.16, 1, 0.3, 1)`) is a
+    // deliberate fix, not a style choice: that curve pins both control
+    // points' y-value at 1 with low x-values, which front-loads ~90% of the
+    // opacity change into the first ~30% of the duration — verified by
+    // numerically evaluating the curve — so the logo looked like it
+    // "snapped" to mostly-visible almost immediately no matter how long the
+    // total duration was, then crawled through an imperceptible tail for
+    // the rest. `ease-in-out` spreads the opacity change evenly across the
+    // whole 12s instead, so a longer duration now actually reads as slower.
+    // `animation-fill-mode: backwards` still holds the `from` keyframe
+    // (opacity: 0) for the full delay window, exactly as before.
+    animation: ty-logo-emerge 12s ease-in-out 1.5s backwards;
+  }
+}
+
+@keyframes ty-text-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ty-logo-emerge {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
