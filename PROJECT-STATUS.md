@@ -1462,6 +1462,22 @@ production GitHub Pages deploy + real admin password handoff.
       `Admins` table is also currently empty post-rename regardless — see
       the table-rename entry above, Simon/the developer still needs to
       (re)create the admin user manually in `spicy-Admins`).
+- [x] **Urgent fix — `spicy-QuestionTemplates` was empty post-rename;
+      Simon noticed.** The table-rename destroy/recreate above wiped all 9
+      question templates along with the (intentionally disposable)
+      exhibitions/responses test data — but the templates themselves are
+      real, needed data, not test data, and re-seeding them was missed at
+      the time. Re-ran **only** `backend/scripts/seed-templates.mjs` (not
+      `seed-demo.mjs`) to restore just the 9 templates without touching
+      exhibitions/responses. Confirmed safe to run before running it: the
+      script's own `wipeTable()` step is Scan+Delete only against
+      `spicy-Exhibitions`/`spicy-Responses` (never inserts), so against
+      already-empty tables it's a no-op — verified this in the output
+      (`wiped 0 item(s)` for both). Independently confirmed via direct
+      `aws dynamodb scan --select COUNT` on all three tables: `spicy-
+      QuestionTemplates` = 9, `spicy-Exhibitions` = 0, `spicy-Responses` =
+      0 — clean slate for Simon (empty exhibitions list) with the standard
+      templates available the next time he creates an exhibition.
 
 ---
 
