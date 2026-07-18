@@ -52,7 +52,7 @@ Visitors give feedback about the current exhibition and about spicy itself. Beca
 
 Three tables. DynamoDB is schema-on-read; only key attributes are fixed. Variable questions are embedded inside each exhibition item (they are always read together with the exhibition).
 
-### Table: `Exhibitions`
+### Table: `spicy-Exhibitions`
 
 | Attribute | Type | Notes |
 |---|---|---|
@@ -63,7 +63,7 @@ Three tables. DynamoDB is schema-on-read; only key attributes are fixed. Variabl
 | `variableQuestions` | List\<Map\> | Each: `{ id, text, type, options? }` |
 | `createdAt` | String (ISO) | Creation timestamp |
 
-### Table: `Responses`
+### Table: `spicy-Responses`
 
 | Attribute | Type | Notes |
 |---|---|---|
@@ -73,7 +73,7 @@ Three tables. DynamoDB is schema-on-read; only key attributes are fixed. Variabl
 | `variableAnswers` | Map | Answers to variable questions, keyed by question id |
 | `submittedAt` | String (ISO) | Submission timestamp |
 
-### Table: `Admins`
+### Table: `spicy-Admins`
 
 | Attribute | Type | Notes |
 |---|---|---|

@@ -1395,6 +1395,73 @@ production GitHub Pages deploy + real admin password handoff.
       (or the bare `http://` form until GitHub Pages' HTTPS enforcement is
       confirmed — see the CORS entry above) — redirects instantly to the
       admin login screen.
+- [x] **DynamoDB tables renamed with a `spicy-` prefix** (matching the
+      Lambda naming convention, avoiding future name collisions with other
+      projects in the same AWS account): `Exhibitions` → `spicy-Exhibitions`,
+      `Responses` → `spicy-Responses`, `Admins` → `spicy-Admins`,
+      `QuestionTemplates` → `spicy-QuestionTemplates`. Only the `name`
+      attribute changed in each `aws_dynamodb_table` resource in `main.tf` —
+      hash/range keys untouched — but `name` forces replacement for this
+      resource type, so this was a genuine destroy+recreate, confirmed
+      acceptable beforehand since the tables held only disposable test/demo
+      data (no migration performed, by design).
+      Lambda env vars (`EXHIBITIONS_TABLE` etc.) already referenced
+      `aws_dynamodb_table.*.name` rather than hardcoded strings, so they
+      picked up the new values automatically — no handler source changes
+      needed. The only hardcoded table-name strings anywhere in the backend
+      were in the two local operator scripts (`backend/scripts/seed-demo.mjs`,
+      `seed-templates.mjs`, both read local AWS credentials directly, not
+      Lambda env vars) — updated to the new names. `SPEC.md` §4 and
+      `terraform/outputs.tf`'s output descriptions updated too for
+      consistency; confirmed via a repo-wide grep that no other bare
+      references to the old names remained.
+      **Plan reviewed before applying**: `4 to add, 12 to change, 4 to
+      destroy` — exactly the 4 tables (destroy+recreate, `name` forcing
+      replacement, all other attributes/keys unchanged) + 11 Lambda handlers
+      updating their table-name env vars in-place + `aws_iam_role_policy.
+      dynamo_access` updating its `Resource` ARN list to the new table
+      ARNs (same actions/effect). Confirmed zero mentions of API Gateway
+      (routes/integrations/stage/authorizer), Lambda permissions, the IAM
+      role itself, or CloudWatch log groups anywhere in the plan. Applied
+      cleanly, matching the plan exactly; spot-checked live afterward
+      (`aws dynamodb list-tables`, a Lambda's resolved env vars) that the 4
+      new tables exist, the old 4 are gone, and env vars resolve correctly.
+- [x] **JWT signing secret rotated, after an accidental exposure.** While
+      spot-checking the table rename above, a verification command
+      (`aws lambda get-function-configuration ... --query
+      "Environment.Variables"`) printed the live JWT secret in plaintext —
+      a raw AWS CLI call bypasses Terraform's own redaction entirely, unlike
+      `terraform plan`/`apply` output. Caught and flagged immediately;
+      treated the exposed value as compromised and rotated it rather than
+      leaving it live.
+      **Before rotating**, confirmed via `terraform providers schema -json`
+      that the AWS provider itself marks `aws_ssm_parameter.jwt_secret.value`
+      as `sensitive: true` in its schema — meaning `terraform plan`/`apply`
+      diffs involving this value show `(sensitive value)`, never the real
+      secret; the leak was specific to the raw CLI spot-check, not a gap in
+      the normal terraform workflow.
+      **Rotation mechanism** — the new value was never printed anywhere:
+      generated with `openssl rand -base64 48` inside a `$(...)` command
+      substitution and piped directly into
+      `aws ssm put-parameter --name /spicy/jwt-secret --overwrite` in one
+      shell command (needed `MSYS_NO_PATHCONV=1` on this Windows/Git-Bash
+      setup — MSYS otherwise mangles the leading-slash parameter name into
+      a Windows path). `put-parameter` only returns `{Version, Tier}`, never
+      the value.
+      **`terraform plan` reviewed and confirmed sensitive-redacted before
+      applying**, per the value.sensitive check above: `Plan: 0 to add, 2 to
+      change, 0 to destroy` — only `aws_lambda_function.authorizer` and
+      `aws_lambda_function.handlers["login"]` (the only two functions that
+      ever touch `JWT_SECRET`; every other admin route is gated by the
+      Lambda Authorizer rather than holding the secret itself), each
+      showing `"JWT_SECRET" = (sensitive value)`. Applied, matching the plan
+      exactly (`0 added, 2 changed, 0 destroyed`) — no secret value appeared
+      in any command output at any point in the rotation.
+      **Consequence, expected**: any previously-issued admin JWT is now
+      invalid; the next admin login will need to re-authenticate (the
+      `Admins` table is also currently empty post-rename regardless — see
+      the table-rename entry above, Simon/the developer still needs to
+      (re)create the admin user manually in `spicy-Admins`).
 
 ---
 
@@ -1405,7 +1472,13 @@ production GitHub Pages deploy + real admin password handoff.
       `http://feedback.spicy-kunstraum.ch` CORS origin** added above
       (`main.tf`, has a `TODO` marking it) — it only exists to cover the
       window before the custom domain's TLS cert finished provisioning.
-- [ ] **Real admin password** — Simon replaces test1234 hash in Admins table at handoff.
+- [ ] **Real admin user** — the `spicy-Admins` table is currently empty
+      (wiped by the table-rename destroy/recreate above, by design). The
+      developer needs to (re)create the admin user directly in
+      `spicy-Admins` — same process as before (generate a bcrypt hash
+      locally, never share it in chat) — before anyone can log into the
+      admin panel again. Old note about a throwaway `test1234` hash no
+      longer applies; that row/table is gone.
 
 ---
 
@@ -1551,8 +1624,21 @@ Roughly in the order from SPEC.md § 12:
   the AWS SDK into each handler file, so no `node_modules` is needed in the ZIP.
 
 - **SSM parameter** — already created at `/spicy/jwt-secret` (SecureString, eu-central-1).
-  To rotate: `aws ssm put-parameter --name /spicy/jwt-secret --value "<new-secret>" --type SecureString --overwrite --region eu-central-1`
-  then `terraform apply` to push the new value into Lambda env vars.
+  To rotate **without ever printing the secret**: generate it inside a
+  `$(...)` substitution so it's never a separate, echoable value —
+  `aws ssm put-parameter --name /spicy/jwt-secret --value "$(openssl rand -base64 48)" --type SecureString --overwrite --region eu-central-1`
+  — then `terraform plan` (confirm the diff shows `"JWT_SECRET" =
+  (sensitive value)`, never the real value — the AWS provider marks
+  `aws_ssm_parameter.value` sensitive) and `apply` to push it into the
+  `login`/`authorizer` Lambdas (the only two that ever hold this secret).
+  **On Windows/Git-Bash**, prefix with `MSYS_NO_PATHCONV=1` — MSYS otherwise
+  mangles the leading-slash parameter name into a Windows path and the call
+  fails with "Parameter name must be a fully qualified name."
+  **Never** fetch this value back via a raw AWS CLI call (e.g. `aws lambda
+  get-function-configuration ... --query Environment.Variables`) to
+  "verify" it — unlike Terraform's own plan/apply output, the CLI does not
+  redact sensitive values, and doing exactly this once already leaked the
+  secret into a chat transcript, forcing an unplanned rotation.
 
 - **`terraform/lambda.zip` should be in `.gitignore`** — it is a build
   artifact produced by `terraform plan/apply`, not source.
@@ -1561,10 +1647,14 @@ Roughly in the order from SPEC.md § 12:
   before plan/apply. No remote backend is configured yet; state is local.
   Consider adding an S3 backend before the first real deploy.
 
-- **Admin user** — `simon` is seeded with a temporary `test1234` hash.
-  Replace at handoff: generate hash offline with bcryptjs (rounds=10), then
-  update the item in the `Admins` table via the AWS console or CLI.
-  The app has no self-registration flow by design (spec § 9.1).
+- **Admin user** — the `spicy-Admins` table (renamed from `Admins`, see the
+  table-rename log entry above) is currently **empty** — the old `simon` /
+  `test1234` row is gone, destroyed along with the old table, not carried
+  over (no migration was performed, by design — the data was disposable
+  test data). Create the real admin user directly in `spicy-Admins`:
+  generate a bcrypt hash offline (rounds=10), then put the item via the AWS
+  console or CLI. The app has no self-registration flow by design (spec
+  § 9.1).
 
 - **CORS** is currently set to `https://feedback.spicy-kunstraum.ch`. During
   development, override with `terraform apply -var='frontend_origin=*'` or

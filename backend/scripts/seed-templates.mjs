@@ -23,9 +23,9 @@ import {
 const REGION = process.env.AWS_REGION ?? 'eu-central-1';
 const dynamo = DynamoDBDocumentClient.from(new DynamoDBClient({ region: REGION }));
 
-const EXHIBITIONS_TABLE = 'Exhibitions';
-const RESPONSES_TABLE = 'Responses';
-const QUESTION_TEMPLATES_TABLE = 'QuestionTemplates';
+const EXHIBITIONS_TABLE = 'spicy-Exhibitions';
+const RESPONSES_TABLE = 'spicy-Responses';
+const QUESTION_TEMPLATES_TABLE = 'spicy-QuestionTemplates';
 
 const templates = [
   {

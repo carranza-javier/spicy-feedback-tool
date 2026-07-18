@@ -131,7 +131,7 @@ resource "aws_iam_role_policy" "dynamo_access" {
 # ── DynamoDB Tables ───────────────────────────────────────────────────────────
 
 resource "aws_dynamodb_table" "exhibitions" {
-  name         = "Exhibitions"
+  name         = "spicy-Exhibitions"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "exhibitionId"
 
@@ -142,7 +142,7 @@ resource "aws_dynamodb_table" "exhibitions" {
 }
 
 resource "aws_dynamodb_table" "responses" {
-  name         = "Responses"
+  name         = "spicy-Responses"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "exhibitionId"
   range_key    = "responseId"
@@ -159,7 +159,7 @@ resource "aws_dynamodb_table" "responses" {
 }
 
 resource "aws_dynamodb_table" "admins" {
-  name         = "Admins"
+  name         = "spicy-Admins"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "username"
 
@@ -170,7 +170,7 @@ resource "aws_dynamodb_table" "admins" {
 }
 
 resource "aws_dynamodb_table" "question_templates" {
-  name         = "QuestionTemplates"
+  name         = "spicy-QuestionTemplates"
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "templateId"
 
